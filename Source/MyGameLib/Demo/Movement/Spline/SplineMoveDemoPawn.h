@@ -34,8 +34,25 @@ class ASplineMoveDemoPawn : public ATUPawn
 public:
 	ASplineMoveDemoPawn();
 
-private:
+	UFUNCTION(BlueprintPure, Category = Movement)
+	class USplinePawnMovement* GetSplineMovement() const;
+
+	UFUNCTION(BlueprintPure, Category = Movement)
+	class USplinePawnMovement* GetSplineMovementChecked() const;
+
+protected:
 	// ~Motion Begin
+	UFUNCTION(BlueprintCallable, Category = Movement)
+	void InitFloatingMovement();
+
+	UFUNCTION(BlueprintCallable, Category = Movement)
+	void InitSplineMovement();
+
+	/**
+	* Inits default movement: WARNING!!! Never create it native event,
+	* as it will be called inside constructor!
+	*/
+	UFUNCTION(Category = Movement)
 	void InitMovement();
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = Motion, Meta=(AllowPrivateAccess = true))

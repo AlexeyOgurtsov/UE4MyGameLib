@@ -1,5 +1,6 @@
-------------------------------------
+-------- Preparation
 Make test environment
+1. Make default spline
 
 
 -------------------------------------

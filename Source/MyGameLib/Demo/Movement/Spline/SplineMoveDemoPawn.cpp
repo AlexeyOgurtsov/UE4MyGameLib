@@ -4,6 +4,7 @@
 
 #include "Util/Core/LogUtilLib.h"
 
+#include "Movement/Spline/SplinePawnMovement.h"
 #include "GameFramework/FloatingPawnMovement.h"
 
 /**
@@ -15,9 +16,9 @@ namespace
 {
 	namespace Config
 	{
-		constexpr float MAX_SPEED = 100.0F;
-		constexpr float ACCELERATION = 0.0F;
-		constexpr float DECELERATION = 0.0F;
+		constexpr float MAX_SPEED = 300.0F;
+		constexpr float ACCELERATION = 100.0F;
+		constexpr float DECELERATION = 100.0F;
 	} // Config
 } // anonymous
 
@@ -36,7 +37,21 @@ void MyPawnType::MyBeginPlay_Implementation()
 void MyPawnType::InitMovement()
 {
 	M_LOGFUNC();
-	UFloatingPawnMovement* const MyMovement = CreateDefaultSubobject<UFloatingPawnMovement>(TEXT("Movement"));
+	//InitFloatingMovement();
+	InitSplineMovement();
+}
+
+void MyPawnType::InitSplineMovement()
+{
+	M_LOGFUNC();
+	USplinePawnMovement* const MyMovement = CreateDefaultSubobject<USplinePawnMovement>(TEXT("SplineMovement"));
+	Movement = MyMovement;
+}
+
+void MyPawnType::InitFloatingMovement()
+{
+	M_LOGFUNC();
+	UFloatingPawnMovement* const MyMovement = CreateDefaultSubobject<UFloatingPawnMovement>(TEXT("FloatingMovement"));
 	MyMovement->Acceleration = Config::ACCELERATION;
 	MyMovement->Deceleration = Config::DECELERATION;
 	MyMovement->MaxSpeed = Config::MAX_SPEED;
@@ -63,4 +78,12 @@ MyPCType* MyPawnType::GetMyPCChecked() const
 	MyPCType* const PC = GetMyPC();
 	checkf(PC, TEXT("GetMyPawn must return non-NULL pawn!"));
 	return PC;
+}
+class USplinePawnMovement* MyPawnType::GetSplineMovement() const
+{
+	return Cast<USplinePawnMovement>(Movement);
+}
+class USplinePawnMovement* MyPawnType::GetSplineMovementChecked() const
+{
+	return CastChecked<USplinePawnMovement>(Movement);
 }

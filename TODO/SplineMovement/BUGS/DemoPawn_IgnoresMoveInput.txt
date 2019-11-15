@@ -1,2 +1,0 @@
-Demo pawn for Spline Movement
-ever if UFloatingPawnMovement component is used, no reaction on movement input;
