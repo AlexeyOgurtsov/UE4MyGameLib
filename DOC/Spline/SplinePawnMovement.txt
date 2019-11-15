@@ -1,0 +1,13 @@
+Functional requirements:
+	- Ability to be deactivated with conserving the velocity of the updated component;
+
+
+Requirement: Movement in coordinate space of the spline.
+	- Separate along-spline speed parameter irrespective of the given input vector;
+	- Movement with velocity corresponding the given pending input vector and the given Speed
+          in the coordinate space of the spline;
+	- Movemement with acceleration corresponding the given pending input vector
+          in the coordinate space of the spline;
+
+Requirement: Spline-space physics:
+	- Add force with spline constraint;
