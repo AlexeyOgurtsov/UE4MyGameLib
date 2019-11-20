@@ -1,0 +1,8 @@
+BUG: No track is created (invisible.
+------------------------------
+When: calling USceneComponent::AttachComponent from Construction Script:
+	PIE: Warning: AttachTo: '/Engine/Transient.World_0:PersistentLevel.BP_SplineTrackGenerator_C_0.SplineMeshComponent_0' root component cannot be attached to other components in the same actor. Aborting.
+	AND USceneComponent::AttachComponent: returns true!
+	meaning: You cannot attach root component to something else
+	+FIXED
+------------------------------
