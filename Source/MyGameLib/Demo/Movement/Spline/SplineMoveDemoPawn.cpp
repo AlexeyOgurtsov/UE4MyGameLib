@@ -45,6 +45,7 @@ void MyPawnType::InitSplineMovement()
 {
 	M_LOGFUNC();
 	USplinePawnMovement* const MyMovement = CreateDefaultSubobject<USplinePawnMovement>(TEXT("SplineMovement"));
+	MyMovement->bEditableWhenInherited = true;
 	Movement = MyMovement;
 }
 
@@ -55,6 +56,7 @@ void MyPawnType::InitFloatingMovement()
 	MyMovement->Acceleration = Config::ACCELERATION;
 	MyMovement->Deceleration = Config::DECELERATION;
 	MyMovement->MaxSpeed = Config::MAX_SPEED;
+	MyMovement->bEditableWhenInherited = true;
 	Movement = MyMovement;
 }
 
