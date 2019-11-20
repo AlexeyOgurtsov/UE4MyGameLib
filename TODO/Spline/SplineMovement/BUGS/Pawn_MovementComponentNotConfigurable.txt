@@ -1,0 +1,9 @@
+Unable to configure the pawn movement component inside the blueprint of the pawn.
+
+https://forums.unrealengine.com/development-discussion/blueprint-visual-scripting/3169-edit-inherited-components
+
+Hi Ufna,
+
+It's not exactly a bug, but it is a limitation of how component templates are stored right now. It's something we want to fix in a future release.
+
+For now, you can change settings in your derived BP by setting them in the user construction script of blueprint B.

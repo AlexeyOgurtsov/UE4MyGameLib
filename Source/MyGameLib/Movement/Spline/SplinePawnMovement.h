@@ -32,7 +32,7 @@ public:
 	// ~ Spline End
 	
 private:
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Meta=(AllowPrivateAccess=true), Category = Config)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Meta=(AllowPrivateAccess=true), Category = Config)
 	FSplineMovementConfig Config;
 	
 	UPROPERTY()

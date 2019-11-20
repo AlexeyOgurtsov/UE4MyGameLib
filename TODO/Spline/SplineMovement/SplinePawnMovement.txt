@@ -1,6 +1,10 @@
 -------- Preparation
 Make test environment
-1. Make default spline
+1. Make default spline track (+DONE)
+
+--------- Access to spline ----------
+1. Make pointer to Spline Provider Weak!
+2. How to provide access to spline?
 
 
 -------------------------------------
