@@ -15,11 +15,22 @@ USplinePawnMovement::USplinePawnMovement()
 {
 	Impl = USplineMovementComponentImpl::CreateSplineMovementComponentImpl(TEXT("SplinePawnMovementComponentImpl"), this, &Config);
 }
+
+void USplinePawnMovement::PostInitProperties()
+{
+	Super::PostInitProperties();
+	Impl->MovementComponentPostInitProperties();
+}
 	
 //~ Begin ActorComponent Interface 
-void USplinePawnMovement::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction)
+void USplinePawnMovement::BeginPlay()
 {
-	if(Impl->ShouldSkipUpdate_BeforeSuper(DeltaTime))
+	Impl->MyBeginPlay();
+}
+
+void USplinePawnMovement::TickComponent(float const DeltaTime, enum ELevelTick const TickType, FActorComponentTickFunction * const ThisTickFunction)
+{
+	if(Impl->TickBeforeSuper_ReturnShouldSkipUpdate(DeltaTime))
 	{
 		return;
 	}
@@ -39,13 +50,30 @@ void USplinePawnMovement::TickComponent(float DeltaTime, enum ELevelTick TickTyp
 	}
 
 	// @TODO: Check for AI Controller case
-	Impl->SetPendingInputVector(DeltaTime, GetPendingInputVector());
+	Impl->SetPendingInputVector(GetPendingInputVector());
+
+	Impl->MoveTick(DeltaTime);
 	
 	// Finalize
+	Impl->FinalizeTick();
 	ConsumeInputVector();
-	UpdateComponentVelocity();
+	//UpdateComponentVelocity(); // ? Why not before MoveTick?
 }
 //~ End ActorComponent Interface 
+
+// ~UMovementComponent Begin
+void USplinePawnMovement::StopMovementImmediately()
+{
+	Super::StopMovementImmediately();
+	Impl->StopMovementImmediately();
+}
+
+void USplinePawnMovement::OnTeleported()
+{
+	Super::OnTeleported();
+	Impl->OnComponentTeleported();
+}
+// ~UMovementComponent End
 
 // ~ UObject Begin
 void USplinePawnMovement::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
@@ -65,4 +93,89 @@ void USplinePawnMovement::PostEditChangeProperty(FPropertyChangedEvent& Property
 USplineComponent* USplinePawnMovement::GetSplineComponent() const
 {
 	return Impl->GetSplineComponent();
+}
+
+ESplineMovementAttachState USplinePawnMovement::GetAttachState() const
+{
+	return Impl->GetAttachState();
+}
+
+bool USplinePawnMovement::IsFreeMovement() const
+{
+	return Impl->IsFreeMovement();
+}
+
+bool USplinePawnMovement::IsMovementAttachedToSpline() const
+{
+	return Impl->IsMovementAttachedToSpline();
+}
+
+bool USplinePawnMovement::IsAttachingMovementToSplineNow() const
+{
+	return Impl->IsAttachingMovementToSplineNow();
+}
+
+bool USplinePawnMovement::IsMovementAttachedOrAttachingToSpline()
+{
+	return Impl->IsMovementAttachedOrAttachingToSpline();
+}
+
+float USplinePawnMovement::GetAttachingTime() const
+{
+	return Impl->GetAttachingTime();
+}
+
+FTransform USplinePawnMovement::GetSplineSpaceTransform() const
+{
+	return Impl->GetSplineSpaceTransform();
+}
+
+float USplinePawnMovement::GetLocationAlongSpline() const
+{
+	return Impl->GetLocationAlongSpline();
+}
+
+FVector USplinePawnMovement::GetMoveSpaceVelocity(bool const bInAddTrackSpeed) const
+{
+	return Impl->GetMoveSpaceVelocity(bInAddTrackSpeed);
+}
+
+float USplinePawnMovement::GetTrackingSpeed() const
+{
+	return Impl->GetTrackingSpeed();
+}
+
+void USplinePawnMovement::SetTrackingSpeed(float InTargetSpeed)
+{
+	Impl->SetTrackingSpeed(InTargetSpeed);
+}
+
+float USplinePawnMovement::GetTargetTrackingSpeed() const
+{
+	return Impl->GetTargetTrackingSpeed();
+}
+
+FTransform USplinePawnMovement::GetSplineToWorld() const
+{
+	return Impl->GetSplineToWorld();
+}
+
+bool USplinePawnMovement::AttachToSpline()
+{
+	return Impl->AttachToSpline();
+}
+
+bool USplinePawnMovement::DetachFromSpline()
+{
+	return Impl->DetachFromSpline();
+}
+
+bool USplinePawnMovement::ToggleAttachToSpline()
+{
+	return Impl->ToggleAttachToSpline();
+}
+
+void USplinePawnMovement::SetLocationAlongSpline(float const NewLocationAlongSpline)
+{
+	return Impl->SetLocationAlongSpline(NewLocationAlongSpline);
 }
