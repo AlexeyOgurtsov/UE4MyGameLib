@@ -96,38 +96,11 @@ public:
 
 	ESplineMovementAttachState GetAttachState() const { return AttachState.State; }
 
-	/**
-	* @param 1: Attachment state right before
-	* Called right before the state is changed and phys variables (transform, velocities, tracking speed) are updated.
-	*/
-	DECLARE_EVENT_OneParam(USplineMovementComponentImpl, FBeforeMovementAttachedToSplineEvent, ESplineMovementAttachState)
 	FBeforeMovementAttachedToSplineEvent& OnBeforeMovementAttachedToSpline() { return BeforeMovementAttachedToSpline; }
-
-	/**
-	* @param 1: Attachment state right before
-	* Called right before the state is changed and phys variables (transform, velocities, tracking speed) are updated.
-	* @warn Not called, when attaching is immediate (@see the corresponding event for the attached state instead!)
-	*/
-	DECLARE_EVENT_OneParam(USplineMovementComponentImpl, FBeforeMovementBeginAttachingToSplineEvent, ESplineMovementAttachState)
 	FBeforeMovementBeginAttachingToSplineEvent& OnBeforeMovementBeginAttachingToSpline() { return BeforeMovementBeginAttachingToSpline; }
-
-	/**
-	* @param 1: Attachment state right before
-	* Called right before the state is changed and phys variables (transform, velocities, tracking speed) are updated.
-	*/
-	DECLARE_EVENT_OneParam(USplineMovementComponentImpl, FBeforeMovementDetachedFromSplineEvent, ESplineMovementAttachState)
 	FBeforeMovementDetachedFromSplineEvent& OnBeforeMovementDetachedFromSpline() { return BeforeMovementDetachedFromSpline; }
-
-	DECLARE_EVENT(USplineMovementComponentImpl, FMovementAttachedToSplineEvent)
 	FMovementAttachedToSplineEvent& OnMovementAttachedToSpline() { return MovementAttachedToSpline; }
-
-	/**
-	* @warn Not called, when attaching is immediate (@see the corresponding event for the attached state instead!)
-	*/
-	DECLARE_EVENT(USplineMovementComponentImpl, FMovementBeginAttachingToSplineEvent)
 	FMovementBeginAttachingToSplineEvent& OnMovementBeginAttachingToSpline() { return MovementBeginAttachingToSpline; }
-
-	DECLARE_EVENT(USplineMovementComponentImpl, FMovementDetachedFromSplineEvent)
 	FMovementDetachedFromSplineEvent& OnMovementDetachedFromSpline() { return MovementDetachedFromSpline; }
 
 	/**

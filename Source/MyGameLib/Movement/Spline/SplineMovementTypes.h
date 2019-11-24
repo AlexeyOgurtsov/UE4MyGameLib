@@ -7,6 +7,8 @@
 * Publicly available types for all types of the Spline Movement components.
 */
 
+class USplineMovementComponentImpl;
+
 UENUM(BlueprintType, Category=SplineMovement)
 enum class ESplineMovementAttachState : uint8
 {
@@ -27,3 +29,31 @@ enum class ESplineMovementAttachState : uint8
 	*/
 	Attached             = 2           UMETA(DisplayName = "Attached")
 };
+
+// ~Events Begin
+/**
+* @param 1: Attachment state right before
+* Called right before the state is changed and phys variables (transform, velocities, tracking speed) are updated.
+*/
+DECLARE_EVENT_OneParam(USplineMovementComponentImpl, FBeforeMovementAttachedToSplineEvent, ESplineMovementAttachState);
+
+/**
+* @param 1: Attachment state right before
+* Called right before the state is changed and phys variables (transform, velocities, tracking speed) are updated.
+* @warn Not called, when attaching is immediate (@see the corresponding event for the attached state instead!)
+*/
+DECLARE_EVENT_OneParam(USplineMovementComponentImpl, FBeforeMovementBeginAttachingToSplineEvent, ESplineMovementAttachState);
+
+/**
+* @param 1: Attachment state right before
+* Called right before the state is changed and phys variables (transform, velocities, tracking speed) are updated.
+*/
+DECLARE_EVENT_OneParam(USplineMovementComponentImpl, FBeforeMovementDetachedFromSplineEvent, ESplineMovementAttachState);
+DECLARE_EVENT(USplineMovementComponentImpl, FMovementAttachedToSplineEvent);
+
+/**
+* @warn Not called, when attaching is immediate (@see the corresponding event for the attached state instead!)
+*/
+DECLARE_EVENT(USplineMovementComponentImpl, FMovementBeginAttachingToSplineEvent);
+DECLARE_EVENT(USplineMovementComponentImpl, FMovementDetachedFromSplineEvent);
+// ~Events End

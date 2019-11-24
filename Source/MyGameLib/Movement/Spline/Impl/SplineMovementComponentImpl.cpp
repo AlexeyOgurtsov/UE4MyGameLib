@@ -9,9 +9,7 @@
 * @TODO Events:
 * 1. Attaching/Detaching/Attached states etc.
 * 1.0. Call the events (+DONE)
-* 1.1. Make accessible from the interface of the movement component class.
-* 1.1.1. Move declaration outside of the class, so we can use the types in the movement component implementation header
-* without including this class's header. 
+* 1.1. Make MovementCompoent's events bindable from Blueprint
 *
 * @TODO
 * 1. Attaching to spline dynamically

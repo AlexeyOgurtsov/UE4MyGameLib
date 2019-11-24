@@ -100,6 +100,36 @@ ESplineMovementAttachState USplinePawnMovement::GetAttachState() const
 	return Impl->GetAttachState();
 }
 
+FBeforeMovementAttachedToSplineEvent& USplinePawnMovement::OnBeforeMovementAttachedToSpline()
+{
+	return Impl->OnBeforeMovementAttachedToSpline();
+}
+
+FBeforeMovementBeginAttachingToSplineEvent& USplinePawnMovement::OnBeforeMovementBeginAttachingToSpline()
+{
+	return Impl->OnBeforeMovementBeginAttachingToSpline();
+}
+
+FBeforeMovementDetachedFromSplineEvent& USplinePawnMovement::OnBeforeMovementDetachedFromSpline()
+{
+	return Impl->OnBeforeMovementDetachedFromSpline();
+}
+
+FMovementAttachedToSplineEvent& USplinePawnMovement::OnMovementAttachedToSpline()
+{
+	return Impl->OnMovementAttachedToSpline();
+}
+
+FMovementBeginAttachingToSplineEvent& USplinePawnMovement::OnMovementBeginAttachingToSpline()
+{
+	return Impl->OnMovementBeginAttachingToSpline();
+}
+
+FMovementDetachedFromSplineEvent& USplinePawnMovement::OnMovementDetachedFromSpline()
+{
+	return Impl->OnMovementDetachedFromSpline();
+}
+
 bool USplinePawnMovement::IsFreeMovement() const
 {
 	return Impl->IsFreeMovement();

@@ -43,6 +43,13 @@ public:
 	UFUNCTION(BlueprintGetter, Category = Spline)
 	ESplineMovementAttachState GetAttachState() const;
 
+	FBeforeMovementAttachedToSplineEvent& OnBeforeMovementAttachedToSpline();
+	FBeforeMovementBeginAttachingToSplineEvent& OnBeforeMovementBeginAttachingToSpline();
+	FBeforeMovementDetachedFromSplineEvent& OnBeforeMovementDetachedFromSpline();
+	FMovementAttachedToSplineEvent& OnMovementAttachedToSpline();
+	FMovementBeginAttachingToSplineEvent& OnMovementBeginAttachingToSpline();
+	FMovementDetachedFromSplineEvent& OnMovementDetachedFromSpline();
+
 	UFUNCTION(BlueprintGetter, Category = Spline)
 	bool IsFreeMovement() const;
 
