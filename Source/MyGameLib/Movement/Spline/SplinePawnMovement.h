@@ -66,7 +66,7 @@ public:
 	float GetAttachingTime() const;
 
 	UFUNCTION(BlueprintGetter, Category = Spline)
-	FTransform GetSplineSpaceTransform() const;
+	FTransform GetLocalToMoveSpace() const;
 
 	UFUNCTION(BlueprintGetter, Category = Spline)
 	float GetLocationAlongSpline() const;

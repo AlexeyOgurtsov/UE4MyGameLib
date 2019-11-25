@@ -55,11 +55,11 @@ struct FSplineMovementAttachRules
 	bool bAttachSweep = false;
 
 	/**
-	* Initial transform relative to spline when attached the first time.
-	* X is really the initial location along the spline.
+	* Initial transform of the local space to the move space when attached the first time.
+	* @warn: X is the initial location along the spline.
 	*/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FTransform InitialSplineTransform = FTransform::Identity;
+	FTransform InitialLocalToMoveSpace = FTransform::Identity;
 };
 
 

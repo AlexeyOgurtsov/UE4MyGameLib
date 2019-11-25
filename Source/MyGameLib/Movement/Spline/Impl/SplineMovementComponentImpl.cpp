@@ -20,7 +20,7 @@
 * 1. After the detachment we must always keep current transform in world space (ever when detaching from attaching with blending state!).
 *
 * @TODO Free Mode
-* 1. Rotation is to be rotated by the SplineSpaceTransform's rotation relative to the movement axis
+* 1. Rotation is to be rotated by the LocalToMoveSpace's rotation relative to the movement axis (+CODED)
 *
 * @TODO Handling Tracking Speed
 * 1. Allow to disable it (necessary for stop immediately)
@@ -167,17 +167,19 @@ void USplineMovementComponentImpl::MoveTick(float const DeltaTime)
 		checkNoEntry();
 	}
 	// Transform from space, in which the movement is calculated now to the world space
-	FTransform MoveSpaceTransform { ENoInit::NoInit };
+	FTransform MoveSpaceToWorld { ENoInit::NoInit };
 	if(bTargetDestinationOnSpline)
 	{
-		MoveSpaceTransform = GetSplineToWorld();
+		MoveSpaceToWorld = GetSplineToWorld();
 	}
 	else
 	{
-		MoveSpaceTransform = GetUpdatedComponent()->GetComponentTransform();
+		// @TODO: Is it correct?
+		// Remove rotation of the local coordinate system relative to the move space
+		MoveSpaceToWorld = GetUpdatedComponent()->GetComponentTransform() * LocalToMoveSpace.GetRotation().Inverse();
 	}
 	
-	FVector const MoveSpaceInputVector = MoveSpaceTransform.InverseTransformVectorNoScale(InputVector);	
+	FVector const MoveSpaceInputVector = MoveSpaceToWorld.InverseTransformVectorNoScale(InputVector);	
 	FVector const MoveSpaceControlAcceleration = CalculateAccelerationFromInputVector(MoveSpaceInputVector, Phys.MoveSpaceVelocity);
 	// Acceleration vector in the coordinate space we move and control now
 	FVector const MoveSpaceAcceleration = bAllowMoveControl ? MoveSpaceControlAcceleration : FVector::ZeroVector;
@@ -193,12 +195,12 @@ void USplineMovementComponentImpl::MoveTick(float const DeltaTime)
 		if(bTargetDestinationOnSpline)
 		{
 			{
-				SplineSpaceTransform.AddToTranslation(MoveDelta);
-				LocationAlongSpline += SplineSpaceTransform.GetLocation().X;
+				LocalToMoveSpace.AddToTranslation(MoveDelta);
+				LocationAlongSpline += LocalToMoveSpace.GetLocation().X;
 				FixSplineTransformAndLocation();
 			}
 	
-			FTransform const TargetTransform = SplineSpaceTransform * MoveSpaceTransform;
+			FTransform const TargetTransform = LocalToMoveSpace * MoveSpaceToWorld;
 
 			// WARNING! We should not check here whether we should blend based on the config,
 			// because the go-to-state functions should already check it.
@@ -220,8 +222,8 @@ void USplineMovementComponentImpl::MoveTick(float const DeltaTime)
 		else
 		{
 			checkf( ! bTargetDestinationOnSpline, TEXT("We on the branch where target destination is not on the spline") );
-			DeltaLocation = MoveSpaceTransform.TransformVectorNoScale(MoveDelta);
-			NewRotation = GetUpdatedComponent()->GetComponentRotation();
+			DeltaLocation = MoveSpaceToWorld.TransformVectorNoScale(MoveDelta);
+			NewRotation = MoveSpaceToWorld.TransformRotation(LocalToMoveSpace.GetRotation()).Rotator();
 		}
 	}
 
@@ -493,15 +495,15 @@ USceneComponent* USplineMovementComponentImpl::GetUpdatedComponent() const
 
 void USplineMovementComponentImpl::ResetToInitialTransformAndLocation()
 {
-	SplineSpaceTransform = GetConfig().AttachRules.InitialSplineTransform;
-	LocationAlongSpline = GetConfig().AttachRules.InitialSplineTransform.GetLocation().X;
+	LocalToMoveSpace = GetConfig().AttachRules.InitialLocalToMoveSpace;
+	LocationAlongSpline = GetConfig().AttachRules.InitialLocalToMoveSpace.GetLocation().X;
 	FixSplineTransformAndLocation();
 }
 
 void USplineMovementComponentImpl::FixSplineTransformAndLocation()
 {
 	FixLocationAlongSpline();
-	SplineSpaceTransform.SetLocation(FVector{0.0F, SplineSpaceTransform.GetLocation().Y, SplineSpaceTransform.GetLocation().Z});
+	LocalToMoveSpace.SetLocation(FVector{0.0F, LocalToMoveSpace.GetLocation().Y, LocalToMoveSpace.GetLocation().Z});
 }
 
 void USplineMovementComponentImpl::FixLocationAlongSpline()
@@ -565,12 +567,12 @@ bool USplineMovementComponentImpl::GotoState_Attaching()
 		{
 			// @TODO: Recalculate location along the spline
 
-			// @TODO: Recalculate new SplineSpaceTransform location
+			// @TODO: Recalculate new LocalToMoveSpace location
 		}
 
 		if(bKeepWorldRotation)
 		{
-			// @TODO: Recalculate new SplineSpaceTransform rotation
+			// @TODO: Recalculate new LocalToMoveSpace rotation
 		}
 	}
 
@@ -578,8 +580,8 @@ bool USplineMovementComponentImpl::GotoState_Attaching()
 	if(bAttachInstantly)
 	{
 		{
-			// Move to the new transform in spline space
-			FTransform const NewTransform = SplineSpaceTransform * GetSplineToWorld();
+			// Move to the new transform in spline space (which is the current move space now)
+			FTransform const NewTransform = LocalToMoveSpace * GetSplineToWorld();
 			FVector const DeltaLocation = NewTransform.GetLocation() - GetUpdatedComponent()->GetComponentLocation();
 			FRotator const NewRotation = NewTransform.Rotator();
 			bool constexpr bSweep = false;

@@ -155,9 +155,9 @@ float USplinePawnMovement::GetAttachingTime() const
 	return Impl->GetAttachingTime();
 }
 
-FTransform USplinePawnMovement::GetSplineSpaceTransform() const
+FTransform USplinePawnMovement::GetLocalToMoveSpace() const
 {
-	return Impl->GetSplineSpaceTransform();
+	return Impl->GetLocalToMoveSpace();
 }
 
 float USplinePawnMovement::GetLocationAlongSpline() const

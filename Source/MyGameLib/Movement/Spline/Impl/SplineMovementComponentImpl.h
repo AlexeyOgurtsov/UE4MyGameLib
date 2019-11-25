@@ -115,7 +115,22 @@ public:
 	* Time of attaching: always zero in detached or attached states.
 	*/
 	float GetAttachingTime() const { return AttachState.AttachingTime; }
-	const FTransform& GetSplineSpaceTransform() const { return SplineSpaceTransform; }
+
+	/**
+	* In attached state: Transform of the local coordinate system in spline space
+	* In attaching state: The goal transform of the local coordinate system we are attaching to in spline space
+	* In detached state: Only rotation is used
+	*
+	* Along-spline offset (X) is always ZERO.
+	* Scale is NEVER accounted.
+	*/
+	const FTransform& GetLocalToMoveSpace() const { return LocalToMoveSpace; }
+
+	/**
+	* In attached state: Location along the spline.
+	* In attaching state: The goal location along the spline.
+	* In detached state: not used.
+	*/
 	float GetLocationAlongSpline() const { return LocationAlongSpline; }
 
 	/**
@@ -253,21 +268,7 @@ private:
 	FVector ComputeMoveDelta(float DeltaTime, const FVector& InAcceleration);
 	void RecalculateTrackingSpeed(float DeltaTime);
 
-	/**
-	* In attached state: Transform in spline space
-	* In attaching state: The goal transform we are attaching to in spline space
-	* In detached state: not used
-	*
-	* Along-spline offset (X) is always ZERO.
-	* Scale is NEVER accounted.
-	*/
-	FTransform SplineSpaceTransform;
-
-	/**
-	* In attached state: Location along the spline.
-	* In attaching state: The goal location along the spline.
-	* In detached state: not used.
-	*/
+	FTransform LocalToMoveSpace;
 	float LocationAlongSpline = 0.0F;
 
 	FSplineMovementPhysState Phys;
