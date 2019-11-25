@@ -55,6 +55,12 @@ struct FSplineMovementAttachRules
 	bool bAttachSweep = false;
 
 	/**
+	* Are we allowed to control while attaching.
+	*/
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bAllowAttachingControl = true;
+
+	/**
 	* Initial transform of the local space to the move space when attached the first time.
 	* @warn: X is the initial location along the spline.
 	*/

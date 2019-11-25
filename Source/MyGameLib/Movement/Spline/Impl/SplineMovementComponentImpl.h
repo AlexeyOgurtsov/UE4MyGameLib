@@ -43,10 +43,10 @@ struct FSplineMovementAttachmentState
 	/**
 	* Transform in world space in the last detached state.
 	*/
-	FTransform DetachedTransform;
+	FTransform MoveSpaceToWorld_BeforeAttaching;
 
 	void SetAttached();
-	void SetAttaching(const FTransform& InDetachedTransform);
+	void SetAttaching(const FTransform& InMoveSpaceToWorldBeforeAttaching);
 	void SetDetached();
 };
 
@@ -154,6 +154,7 @@ public:
 	* Transform from the spline space to the world space at current location along spline.
 	*/
 	FTransform GetSplineToWorld() const;
+
 
 	/**
 	* Detaches from spline.
@@ -269,6 +270,8 @@ private:
 
 	FVector UpdateMoveSpaceVelocity_AndReturnMoveDelta(float DeltaTime, const FVector& InAcceleration);
 	void RecalculateTrackingSpeed(float DeltaTime);
+
+	FTransform GetMoveSpaceToWorld_ForFreeMovement() const;
 
 	FTransform LocalToMoveSpace;
 	float LocationAlongSpline = 0.0F;

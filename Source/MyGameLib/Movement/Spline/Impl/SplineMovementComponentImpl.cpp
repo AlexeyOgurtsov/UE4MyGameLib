@@ -163,7 +163,7 @@ void USplineMovementComponentImpl::MoveTick(float const DeltaTime)
 
 	case ESplineMovementAttachState::Attaching:
 		bTargetDestinationOnSpline = true;
-		bAllowMoveControl = false;
+		bAllowMoveControl = GetConfig().AttachRules.bAllowAttachingControl;
 		bSweep = GetConfig().AttachRules.bAttachSweep;
 		// WARNING! We should not check here whether we should blend based on the config,
 		// because the go-to-state functions should already check it.
@@ -187,7 +187,7 @@ void USplineMovementComponentImpl::MoveTick(float const DeltaTime)
 	// Translation of the movement space from the last detached state to target
 	FVector MoveSpaceDetachedToTargetTranslation = FVector::ZeroVector;
 	// Velocity along the blend direction in the world space
-	FVector const MoveSpaceBlendVelocity = FVector::ZeroVector;
+	FVector MoveSpaceBlendVelocity = FVector::ZeroVector;
 	{
 		if(bTargetDestinationOnSpline)
 		{
@@ -196,11 +196,11 @@ void USplineMovementComponentImpl::MoveTick(float const DeltaTime)
 			if(bWithBlend)
 			{
 				float const AttachBlendTime = GetConfig().AttachRules.AttachBlendTime;
-				FTransform const MoveSpaceToWorld_BeforeAttachingStarted = FTransform::Identity; // @TODO
-				if( ! IsNearlyZero(AttachBlendTime) )
+				FTransform const MoveSpaceToWorld_BeforeAttachingStarted = AttachState.MoveSpaceToWorld_BeforeAttaching;
+				if( ! FMath::IsNearlyZero(AttachBlendTime) )
 				{
-					MoveSpaceToWorld.Blend(MoveToWorld_BeforeAttachingStarted, TargetSplineToWorld, AttachState.AttachingTime / AttachBlendTime );
-					MoveSpaceDetachedToTargetTranslation = TargetSplineToWorld.GetLocation() - MoveSpaceToWorld_BeforeDetached;
+					MoveSpaceToWorld.Blend(MoveSpaceToWorld_BeforeAttachingStarted, TargetSplineToWorld, AttachState.AttachingTime / AttachBlendTime );
+					MoveSpaceDetachedToTargetTranslation = TargetSplineToWorld.GetLocation() - MoveSpaceToWorld_BeforeAttachingStarted.GetLocation();
 					MoveSpaceBlendVelocity = MoveSpaceDetachedToTargetTranslation / AttachBlendTime;
 				}
 			}
@@ -211,9 +211,7 @@ void USplineMovementComponentImpl::MoveTick(float const DeltaTime)
 		}
 		else
 		{
-			// @TODO: Is it correct?
-			// Remove rotation of the local coordinate system relative to the move space
-			MoveSpaceToWorld = GetUpdatedComponent()->GetComponentTransform() * LocalToMoveSpace.GetRotation().Inverse();
+			MoveSpaceToWorld = GetMoveSpaceToWorld_ForFreeMovement();
 		}
 	}
 
@@ -284,6 +282,16 @@ void USplineMovementComponentImpl::MoveTick(float const DeltaTime)
 			GotoState_Attached();
 		}
 	}
+}
+
+/**
+* Calculate the move space to world transform as if the current mode is a free movement mode.
+*/
+FTransform USplineMovementComponentImpl::GetMoveSpaceToWorld_ForFreeMovement() const
+{
+	// @TODO: Is it correct?
+	// Remove rotation of the local coordinate system relative to the move space
+	return GetUpdatedComponent()->GetComponentTransform() * LocalToMoveSpace.GetRotation().Inverse();
 }
 
 void USplineMovementComponentImpl::OnComponentTeleported()
@@ -658,8 +666,8 @@ bool USplineMovementComponentImpl::GotoState_Attaching()
 		// Move-space location offset is not used in the detached state, 
 		// so to make smooth transition, we must reset it.
 		LocalToMoveSpace.SetLocation(FVector::ZeroVector);
-		FTransform const OldTransform = GetUpdatedComponent()->GetComponentTransform();
-		AttachState.SetAttaching(OldTransform);
+		FTransform const OldMoveSpaceToWorld = GetMoveSpaceToWorld_ForFreeMovement();
+		AttachState.SetAttaching(OldMoveSpaceToWorld);
 		MovementBeginAttachingToSpline.Broadcast();
 		return true;
 	}
@@ -698,11 +706,11 @@ void FSplineMovementAttachmentState::SetAttached()
 	AttachingTime          = 0.0F;
 }
 
-void FSplineMovementAttachmentState::SetAttaching(const FTransform& InDetachedTransform)
+void FSplineMovementAttachmentState::SetAttaching(const FTransform& InMoveSpaceToWorldBeforeAttaching)
 {
-	State                  = ESplineMovementAttachState::Attaching;
-	DetachedTransform      = InDetachedTransform;
-	AttachingTime          = 0.0F;
+	State                                  = ESplineMovementAttachState::Attaching;
+	MoveSpaceToWorld_BeforeAttaching       = InMoveSpaceToWorldBeforeAttaching;
+	AttachingTime                          = 0.0F;
 }
 
 void FSplineMovementAttachmentState::SetDetached()
