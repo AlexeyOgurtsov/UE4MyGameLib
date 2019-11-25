@@ -164,6 +164,7 @@ void USplineMovementComponentImpl::MoveTick(float const DeltaTime)
 	// Is arbitrary movement control is allowed in this state
 	bool bAllowMoveControl = true;
 	bool bSweep = true;
+	bool bWithBlend = false;
 	switch(AttachState.State)
 	{
 	case ESplineMovementAttachState::Detached:
@@ -174,12 +175,16 @@ void USplineMovementComponentImpl::MoveTick(float const DeltaTime)
 		bTargetDestinationOnSpline = true;
 		bAllowMoveControl = false;
 		bSweep = GetConfig().AttachRules.bAttachSweep;
+		// WARNING! We should not check here whether we should blend based on the config,
+		// because the go-to-state functions should already check it.
+		bWithBlend = (AttachState.State == ESplineMovementAttachState::Attaching);
 		break;
 	
 	case ESplineMovementAttachState::Attached:
 		bTargetDestinationOnSpline = true;
 		bAllowMoveControl = true;
 		bSweep = true;
+		bWithBlend = false;
 		break;
 
 	default:
@@ -223,9 +228,6 @@ void USplineMovementComponentImpl::MoveTick(float const DeltaTime)
 	
 			FTransform const TargetTransform = LocalToMoveSpace * MoveSpaceToWorld;
 
-			// WARNING! We should not check here whether we should blend based on the config,
-			// because the go-to-state functions should already check it.
-			bool const bWithBlend = (AttachState.State == ESplineMovementAttachState::Attaching);
 			// New transform of the updated component in world space
 			FTransform NewTransform { ENoInit::NoInit };
 			if(bWithBlend)
