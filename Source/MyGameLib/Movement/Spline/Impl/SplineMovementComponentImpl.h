@@ -219,6 +219,10 @@ public:
 	void StopMovementImmediately();
 	// ~From Movement Component End
 	
+	// ~UObject Begin
+	virtual UWorld* GetWorld() const override;
+	// ~UObject End
+	
 private:
 	// ~Spline attachment Begin
 	void ReLinkToSpline();

@@ -4,6 +4,7 @@
 #include "Components/SplineComponent.h"
 #include "Math/UnrealMathUtility.h"
 #include "GenericPlatform/GenericPlatformMath.h"
+#include "Engine/World.h"
 
 /**
 * @TODO Events:
@@ -45,6 +46,7 @@
 
 USplineMovementComponentImpl::USplineMovementComponentImpl()
 {
+	AttachState.SetDetached();
 }
 
 USplineMovementComponentImpl* USplineMovementComponentImpl::CreateSplineMovementComponentImpl(FName const InObjectName, UMovementComponent* const InMovementComponent, FSplineMovementConfig* const pInConfig)
@@ -124,6 +126,9 @@ void USplineMovementComponentImpl::FinalizeTick()
 
 void USplineMovementComponentImpl::MoveTick(float const DeltaTime)
 {
+	// @TODO: Check whether we should execute based on the current world type
+	// @TODO: Check whether we should execute based on the active state
+
 	// Warning: we must perform the state transitions earlier then the state-dependent variables calculation.
 	if(AttachState.State == ESplineMovementAttachState::Attaching)
 	{
@@ -505,7 +510,8 @@ void USplineMovementComponentImpl::FixLocationAlongSpline()
 	{
 		return;
 	}
-	LocationAlongSpline = FGenericPlatformMath::Fmod(LocationAlongSpline, GetSplineComponent()->GetSplineLength());
+	float const MaxLocation = GetSplineComponent()->GetSplineLength();
+	LocationAlongSpline = MaxLocation > 0.0F ? FGenericPlatformMath::Fmod(LocationAlongSpline, MaxLocation) : 0.0F;
 }
 
 /**
@@ -515,6 +521,7 @@ void USplineMovementComponentImpl::FixLocationAlongSpline()
 bool USplineMovementComponentImpl::GotoState_Attaching()
 {
 	M_LOGFUNC();
+	checkf( ! GetWorld()->IsGameWorld(), TEXT("\"%s\" is designed to be called in game worlds only"), TEXT(__FUNCTION__));
 	checkf( GetSplineComponent(), TEXT("When calling \"%s\" the spline component must be valid non-NULL pointer"), TEXT(__FUNCTION__));
 	checkf( GetUpdatedComponent(), TEXT("When calling \"%s\" the updated primitive must be valid non-NULL pointer"), TEXT(__FUNCTION__));
 
@@ -639,3 +646,8 @@ void FSplineMovementAttachmentState::SetDetached()
 	AttachingTime          = 0.0F;
 }
 // ~ FSplineMovementAttachmentState End
+//
+UWorld* USplineMovementComponentImpl::GetWorld() const
+{
+	return MovementComponent->GetWorld();
+}
