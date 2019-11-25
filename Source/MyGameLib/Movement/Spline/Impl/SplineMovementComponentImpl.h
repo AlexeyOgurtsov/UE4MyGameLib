@@ -264,7 +264,7 @@ private:
 	// ~Spline attachnment End
 
 	void FixLocationAlongSpline();
-	void FixSplineTransformAndLocation();
+	void FixLocalToMoveSpace();
 	void ResetToInitialTransformAndLocation();
 
 	FVector UpdateMoveSpaceVelocity_AndReturnMoveDelta(float DeltaTime, const FVector& InAcceleration);

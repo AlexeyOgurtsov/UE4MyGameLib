@@ -149,16 +149,6 @@ void USplineMovementComponentImpl::FinalizeTick()
 
 void USplineMovementComponentImpl::MoveTick(float const DeltaTime)
 {
-	// Warning: we must perform the state transitions earlier then the state-dependent variables calculation.
-	if(AttachState.State == ESplineMovementAttachState::Attaching)
-	{
-		AttachState.AttachingTime += DeltaTime;
-		if(AttachState.AttachingTime >= GetConfig().AttachRules.AttachBlendTime)
-		{
-			GotoState_Attached();
-		}
-	}
-
 	// All initializer values here are to be valid for the detached state!
 	bool bTargetDestinationOnSpline = false; // Is target destination on spline?
 	// Is arbitrary movement control is allowed in this state
@@ -191,62 +181,83 @@ void USplineMovementComponentImpl::MoveTick(float const DeltaTime)
 		M_LOG_ERROR(TEXT("Unknown spline movement attach state"));
 		checkNoEntry();
 	}
+
 	// Transform from space, in which the movement is calculated now to the world space
 	FTransform MoveSpaceToWorld { ENoInit::NoInit };
-	if(bTargetDestinationOnSpline)
+	// Translation of the movement space from the last detached state to target
+	FVector MoveSpaceDetachedToTargetTranslation = FVector::ZeroVector;
+	// Velocity along the blend direction in the world space
+	FVector const MoveSpaceBlendVelocity = FVector::ZeroVector;
 	{
-		MoveSpaceToWorld = GetSplineToWorld();
+		if(bTargetDestinationOnSpline)
+		{
+			// @TODO: Make it evident that we are dependent on the LocationAlongTheSpline here!
+			FTransform const TargetSplineToWorld = GetSplineToWorld();
+			if(bWithBlend)
+			{
+				float const AttachBlendTime = GetConfig().AttachRules.AttachBlendTime;
+				FTransform const MoveSpaceToWorld_BeforeAttachingStarted = FTransform::Identity; // @TODO
+				if( ! IsNearlyZero(AttachBlendTime) )
+				{
+					MoveSpaceToWorld.Blend(MoveToWorld_BeforeAttachingStarted, TargetSplineToWorld, AttachState.AttachingTime / AttachBlendTime );
+					MoveSpaceDetachedToTargetTranslation = TargetSplineToWorld.GetLocation() - MoveSpaceToWorld_BeforeDetached;
+					MoveSpaceBlendVelocity = MoveSpaceDetachedToTargetTranslation / AttachBlendTime;
+				}
+			}
+			else
+			{
+				MoveSpaceToWorld = TargetSplineToWorld;
+			}
+		}
+		else
+		{
+			// @TODO: Is it correct?
+			// Remove rotation of the local coordinate system relative to the move space
+			MoveSpaceToWorld = GetUpdatedComponent()->GetComponentTransform() * LocalToMoveSpace.GetRotation().Inverse();
+		}
 	}
-	else
-	{
-		// @TODO: Is it correct?
-		// Remove rotation of the local coordinate system relative to the move space
-		MoveSpaceToWorld = GetUpdatedComponent()->GetComponentTransform() * LocalToMoveSpace.GetRotation().Inverse();
-	}
-	
+
 	FVector const MoveSpaceInputVector = MoveSpaceToWorld.InverseTransformVectorNoScale(InputVector);	
 	FVector const MoveSpaceControlAcceleration = CalculateAccelerationFromInputVector(MoveSpaceInputVector, Phys.MoveSpaceVelocity);
 	// Acceleration vector in the coordinate space we move and control now
 	FVector const MoveSpaceAcceleration = bAllowMoveControl ? MoveSpaceControlAcceleration : FVector::ZeroVector;
-
 	RecalculateTrackingSpeed(DeltaTime);
 
 	// MoveDelta in the Move space (@see ComputeMoveDelta help)
 	FVector const MoveDelta = UpdateMoveSpaceVelocity_AndReturnMoveDelta(DeltaTime, MoveSpaceAcceleration);
-	MovementComponent->Velocity = MoveSpaceToWorld.TransformVectorNoScale(GetMoveSpaceVelocity());
+
+	if(bTargetDestinationOnSpline)
+	{
+		LocalToMoveSpace.AddToTranslation(MoveDelta);
+		if( ! bWithBlend )
+		{
+			LocationAlongSpline += LocalToMoveSpace.GetLocation().X;
+			FixLocationAlongSpline();
+		}
+		else
+		{
+			checkf(bWithBlend, TEXT("In \"%s\": We are on the branch where blending is enabled"), TEXT(__FUNCTION__));
+			// Blend faster when moving forward
+			// @TODO
+		}
+		// Warning: Fixing local-to-move-space must be done after it's .X component is accounted, as it's zeroed here!
+		FixLocalToMoveSpace();
+	}
+
 
 	FVector DeltaLocation; // Delta Location In World Space
 	FRotator NewRotation; // New Rotation in World Space
 	{
 		if(bTargetDestinationOnSpline)
 		{
-			{
-				LocalToMoveSpace.AddToTranslation(MoveDelta);
-				LocationAlongSpline += LocalToMoveSpace.GetLocation().X;
-				FixSplineTransformAndLocation();
-			}
-	
-			FTransform const TargetTransform = LocalToMoveSpace * MoveSpaceToWorld;
-
 			// New transform of the updated component in world space
-			FTransform NewTransform { ENoInit::NoInit };
-			if(bWithBlend)
-			{
-				float const AttachBlendTime = GetConfig().AttachRules.AttachBlendTime;
-				// Blend between Target Transform and the DetachedTransform, so we are attaching smoothly.
-				NewTransform.Blend( AttachState.DetachedTransform, TargetTransform, AttachState.AttachingTime / AttachBlendTime );
-				// @TODO: Blend velocities here
-			}
-			else
-			{
-				NewTransform = TargetTransform;
-			}
-			DeltaLocation = NewTransform.GetLocation() - GetUpdatedComponent()->GetComponentLocation();
-			NewRotation = NewTransform.Rotator();
+			FTransform const TargetTransform = LocalToMoveSpace * MoveSpaceToWorld;
+			DeltaLocation = TargetTransform.GetLocation() - GetUpdatedComponent()->GetComponentLocation();
+			NewRotation = TargetTransform.Rotator();
 		}
 		else
 		{
-			checkf( ! bTargetDestinationOnSpline, TEXT("We on the branch where target destination is not on the spline") );
+			checkf( ! bTargetDestinationOnSpline, TEXT("In \"%s\": We are on the branch now, that requires that the target destination is NOT on the spline!"), TEXT(__FUNCTION__));
 			DeltaLocation = MoveSpaceToWorld.TransformVectorNoScale(MoveDelta);
 			NewRotation = MoveSpaceToWorld.TransformRotation(LocalToMoveSpace.GetRotation()).Rotator();
 		}
@@ -259,6 +270,20 @@ void USplineMovementComponentImpl::MoveTick(float const DeltaTime)
 	}
 
 	// @TODO: Attaching state goes to detached when we received a blocking hit
+	
+	{
+		MovementComponent->Velocity = MoveSpaceToWorld.TransformVectorNoScale(GetMoveSpaceVelocity());
+		MovementComponent->Velocity += MoveSpaceBlendVelocity * DeltaTime;
+	}
+	
+	if(AttachState.State == ESplineMovementAttachState::Attaching)
+	{
+		AttachState.AttachingTime += DeltaTime;
+		if(AttachState.AttachingTime >= GetConfig().AttachRules.AttachBlendTime)
+		{
+			GotoState_Attached();
+		}
+	}
 }
 
 void USplineMovementComponentImpl::OnComponentTeleported()
@@ -532,12 +557,12 @@ void USplineMovementComponentImpl::ResetToInitialTransformAndLocation()
 {
 	LocalToMoveSpace = GetConfig().AttachRules.InitialLocalToMoveSpace;
 	LocationAlongSpline = GetConfig().AttachRules.InitialLocalToMoveSpace.GetLocation().X;
-	FixSplineTransformAndLocation();
+	FixLocationAlongSpline();
+	FixLocalToMoveSpace();
 }
 
-void USplineMovementComponentImpl::FixSplineTransformAndLocation()
+void USplineMovementComponentImpl::FixLocalToMoveSpace()
 {
-	FixLocationAlongSpline();
 	LocalToMoveSpace.SetLocation(FVector{0.0F, LocalToMoveSpace.GetLocation().Y, LocalToMoveSpace.GetLocation().Z});
 }
 
@@ -629,7 +654,10 @@ bool USplineMovementComponentImpl::GotoState_Attaching()
 	}
 	else
 	{
-		M_LOG(TEXT("GotoState: Attaching"));
+		M_LOG(TEXT("GotoState: Attaching (Smooth transition)"));
+		// Move-space location offset is not used in the detached state, 
+		// so to make smooth transition, we must reset it.
+		LocalToMoveSpace.SetLocation(FVector::ZeroVector);
 		FTransform const OldTransform = GetUpdatedComponent()->GetComponentTransform();
 		AttachState.SetAttaching(OldTransform);
 		MovementBeginAttachingToSpline.Broadcast();
