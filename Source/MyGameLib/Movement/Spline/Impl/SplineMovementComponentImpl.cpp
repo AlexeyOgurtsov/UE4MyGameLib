@@ -177,7 +177,7 @@ void USplineMovementComponentImpl::MoveTick(float const DeltaTime)
 		bSweep = GetConfig().AttachRules.bAttachSweep;
 		// WARNING! We should not check here whether we should blend based on the config,
 		// because the go-to-state functions should already check it.
-		bWithBlend = (AttachState.State == ESplineMovementAttachState::Attaching);
+		bWithBlend = true;
 		break;
 	
 	case ESplineMovementAttachState::Attached:
