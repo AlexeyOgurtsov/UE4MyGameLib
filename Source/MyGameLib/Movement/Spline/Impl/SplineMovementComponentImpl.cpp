@@ -82,6 +82,17 @@ bool USplineMovementComponentImpl::TickBeforeSuper_ReturnShouldSkipUpdate(float 
 {
 	bool bShouldSkip = false;
 
+	if( ! IsActive() )
+	{
+		bShouldSkip = true;
+	}
+
+	// For now we simulate only in game
+	if( ! GetWorld()->IsGameWorld() )
+	{
+		bShouldSkip = true;
+	}
+
 	if( ! GetConfig().SplineProvider.IsValid(false) )
 	{
 		if(SplineComponent)
@@ -104,6 +115,17 @@ bool USplineMovementComponentImpl::TickBeforeSuper_ReturnShouldSkipUpdate(float 
 		bShouldSkip = true;
 	}
 
+	if(UPrimitiveComponent* const UpdatedPrimitive = GetUpdatedPrimitive())
+	{
+		if(UpdatedPrimitive->IsSimulatingPhysics())
+		{
+			// For now, primitives that are simulating physics are instantly detached from the spline,
+			// and never processed by the simulation
+			bShouldBeDetached = true;
+			bShouldSkip = true;
+		}
+	}
+
 	if(IsMovementAttachedOrAttachingToSpline() && bShouldBeDetached)
 	{
 		M_LOG(TEXT("Automatic detaching from spline"));
@@ -122,13 +144,11 @@ bool USplineMovementComponentImpl::TickBeforeSuper_ReturnShouldSkipUpdate(float 
 void USplineMovementComponentImpl::FinalizeTick()
 {
 	InputVector = FVector::ZeroVector;
+	MovementComponent->UpdateComponentVelocity();
 }
 
 void USplineMovementComponentImpl::MoveTick(float const DeltaTime)
 {
-	// @TODO: Check whether we should execute based on the current world type
-	// @TODO: Check whether we should execute based on the active state
-
 	// Warning: we must perform the state transitions earlier then the state-dependent variables calculation.
 	if(AttachState.State == ESplineMovementAttachState::Attaching)
 	{
@@ -187,7 +207,8 @@ void USplineMovementComponentImpl::MoveTick(float const DeltaTime)
 	RecalculateTrackingSpeed(DeltaTime);
 
 	// MoveDelta in the Move space (@see ComputeMoveDelta help)
-	FVector const MoveDelta = ComputeMoveDelta(DeltaTime, MoveSpaceAcceleration);
+	FVector const MoveDelta = UpdateMoveSpaceVelocity_AndReturnMoveDelta(DeltaTime, MoveSpaceAcceleration);
+	MovementComponent->Velocity = MoveSpaceToWorld.TransformVectorNoScale(GetMoveSpaceVelocity());
 
 	FVector DeltaLocation; // Delta Location In World Space
 	FRotator NewRotation; // New Rotation in World Space
@@ -205,12 +226,14 @@ void USplineMovementComponentImpl::MoveTick(float const DeltaTime)
 			// WARNING! We should not check here whether we should blend based on the config,
 			// because the go-to-state functions should already check it.
 			bool const bWithBlend = (AttachState.State == ESplineMovementAttachState::Attaching);
+			// New transform of the updated component in world space
 			FTransform NewTransform { ENoInit::NoInit };
 			if(bWithBlend)
 			{
 				float const AttachBlendTime = GetConfig().AttachRules.AttachBlendTime;
 				// Blend between Target Transform and the DetachedTransform, so we are attaching smoothly.
 				NewTransform.Blend( AttachState.DetachedTransform, TargetTransform, AttachState.AttachingTime / AttachBlendTime );
+				// @TODO: Blend velocities here
 			}
 			else
 			{
@@ -296,7 +319,7 @@ void USplineMovementComponentImpl::RecalculateTrackingSpeed(float const DeltaTim
 * @param: InAcceleration: Acceleration in the move space
 * @param bAddTrackSpeed: if true, then add tracking speed component to the forward velocity part
 */
-FVector USplineMovementComponentImpl::ComputeMoveDelta(float const DeltaTime, const FVector& InAcceleration)
+FVector USplineMovementComponentImpl::UpdateMoveSpaceVelocity_AndReturnMoveDelta(float const DeltaTime, const FVector& InAcceleration)
 {
 	// Verlet velocity integration
 	FVector const DeltaLocation = DeltaTime * GetMoveSpaceVelocity() + 0.5F * DeltaTime * DeltaTime * InAcceleration;
@@ -491,6 +514,16 @@ AActor* USplineMovementComponentImpl::GetOwner() const
 USceneComponent* USplineMovementComponentImpl::GetUpdatedComponent() const
 {
 	return MovementComponent->UpdatedComponent;
+}
+
+UPrimitiveComponent* USplineMovementComponentImpl::GetUpdatedPrimitive() const
+{
+	return MovementComponent->UpdatedPrimitive;
+}
+
+bool USplineMovementComponentImpl::IsActive() const
+{
+	return MovementComponent->IsActive();
 }
 
 void USplineMovementComponentImpl::ResetToInitialTransformAndLocation()

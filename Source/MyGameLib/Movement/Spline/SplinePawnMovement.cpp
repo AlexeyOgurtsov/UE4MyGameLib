@@ -57,7 +57,6 @@ void USplinePawnMovement::TickComponent(float const DeltaTime, enum ELevelTick c
 	// Finalize
 	Impl->FinalizeTick();
 	ConsumeInputVector();
-	//UpdateComponentVelocity(); // ? Why not before MoveTick?
 }
 //~ End ActorComponent Interface 
 
@@ -76,18 +75,20 @@ void USplinePawnMovement::OnTeleported()
 // ~UMovementComponent End
 
 // ~ UObject Begin
+#if WITH_EDITOR
 void USplinePawnMovement::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 
 	if(PropertyChangedEvent.Property)
 	{
-		if(PropertyChangedEvent.Property->GetFName() == FName(TEXT("Config")))
+		if(PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(USplinePawnMovement, Config))
 		{
 			Impl->UpdateFromConfig();
 		}
 	}
 }
+#endif // WITH_EDITOR
 // ~ UObject End
 
 USplineComponent* USplinePawnMovement::GetSplineComponent() const

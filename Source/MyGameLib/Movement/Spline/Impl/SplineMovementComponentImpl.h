@@ -87,6 +87,8 @@ public:
 	UMovementComponent* GetMovementComponent() const { return MovementComponent; }
 	AActor* GetOwner() const;
 	USceneComponent* GetUpdatedComponent() const;
+	UPrimitiveComponent* GetUpdatedPrimitive() const;
+	bool IsActive() const;
 	// ~Environment End
 
 	/** GetMovementComponent*/
@@ -265,7 +267,7 @@ private:
 	void FixSplineTransformAndLocation();
 	void ResetToInitialTransformAndLocation();
 
-	FVector ComputeMoveDelta(float DeltaTime, const FVector& InAcceleration);
+	FVector UpdateMoveSpaceVelocity_AndReturnMoveDelta(float DeltaTime, const FVector& InAcceleration);
 	void RecalculateTrackingSpeed(float DeltaTime);
 
 	FTransform LocalToMoveSpace;
