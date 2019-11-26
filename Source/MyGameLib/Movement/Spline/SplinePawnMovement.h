@@ -94,6 +94,9 @@ public:
 	UFUNCTION(BlueprintGetter, Category = Spline)
 	FTransform GetSplineToWorld() const;
 
+	UFUNCTION(BlueprintGetter, Category = Spline)
+	const FTransform& GetMoveSpaceToWorld() const;
+
 	UFUNCTION(BlueprintCallable, Category = Spline)
 	bool AttachToSpline();
 

@@ -33,6 +33,30 @@ struct FSplineMovementPhysState
 };
 
 USTRUCT()
+struct FSplineMovementMoveSpace
+{
+	GENERATED_BODY()
+
+	// Transform from space, in which the movement is calculated now to the world space
+	UPROPERTY()
+	FTransform Transform;
+
+	// Translation of the movement space from the last detached state to target
+	UPROPERTY()
+	FVector MoveSpaceDetachedToTargetTranslation = FVector::ZeroVector;
+
+	// Velocity along the blend direction in the world space
+	UPROPERTY()
+	FVector BlendVelocity = FVector::ZeroVector;
+
+	FSplineMovementMoveSpace() 
+	:	Transform ( ENoInit::NoInit )
+	{
+	}
+
+};
+
+USTRUCT()
 struct FSplineMovementAttachmentState
 {
 	GENERATED_BODY()
@@ -169,6 +193,11 @@ public:
 	*/
 	FTransform GetSplineToWorld() const;
 
+	/**
+	* Transform from the move space to the world space.
+	* Always valid!
+	*/
+	const FTransform& GetMoveSpaceToWorld() const;
 
 	/**
 	* Detaches from spline.
@@ -287,6 +316,17 @@ private:
 
 	FTransform GetMoveSpaceToWorld_ForFreeMovement() const;
 
+	void RecalculateMoveSpace() const;
+	void RecalculateMoveSpace(bool bTargetDestinationOnSpline, bool bWithBlend) const;
+	bool ShouldTargetDestinationBeOnSpline() const;
+	bool IsWithBlend() const;
+	
+	/**
+	* Movement space
+	* Always calculated on-demand (when some function needs the move space it calls the move space recalculation function by itself)
+	*/
+	mutable FSplineMovementMoveSpace MoveSpace;
+
 	void UpdateSplineTransformFromWorld();
 	void UpdateSplinePhysParamsFromWorld();
 
@@ -299,7 +339,6 @@ private:
 	FSplineMovementPhysState Phys;
 
 	FVector CalculateAccelerationFromInputVector(const FVector& InInputVector, const FVector& InOldVelocity) const;
-
 	FVector InputVector = FVector::ZeroVector;
 
 	// ~Environment Begin

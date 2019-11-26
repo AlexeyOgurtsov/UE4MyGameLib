@@ -206,6 +206,11 @@ FTransform USplinePawnMovement::GetSplineToWorld() const
 	return Impl->GetSplineToWorld();
 }
 
+const FTransform& USplinePawnMovement::GetMoveSpaceToWorld() const
+{
+	return Impl->GetMoveSpaceToWorld();
+}
+
 bool USplinePawnMovement::AttachToSpline()
 {
 	return Impl->AttachToSpline();
