@@ -1,5 +1,6 @@
 #include "SplineMovementComponentImpl.h"
 #include "GameUtil/Math/GameMath.h"
+#include "GameUtil/Spline/MySplineUtil.h"
 #include "Util/Core/LogUtilLib.h"
 
 #include "GameFramework/MovementComponent.h"
@@ -260,9 +261,8 @@ void USplineMovementComponentImpl::MoveTick(float const DeltaTime)
 			if(IsMovementAttachedToSpline())
 			{
 				UpdateSplineTransformFromWorld();
-				// Warning! We cannot count on calculated state-dependend variables any more,
-				// because the state may be changed at this point!
-				RecalculateMoveSpace();
+				// Note: It's unnecessary to recalculate the move space here,
+				// because it's automatically recalculated while updating the transform
 				FixVelocityInWorldSpace(MovementComponent->Velocity);
 			}
 		}
@@ -366,7 +366,20 @@ void USplineMovementComponentImpl::RecalculateMoveSpace(bool bTargetDestinationO
 void USplineMovementComponentImpl::UpdateSplineTransformFromWorld()
 {
 	M_LOGFUNC();
-	// @TODO
+
+	// Update location along the spline
+	// WARNING! Note that we're calculating APPROXIMATE distnace along the spline!
+	LocationAlongSpline = UMySplineUtil::GetDistanceAlongSplineClosestToPoint(GetSplineComponent(), GetUpdatedComponent()->GetComponentLocation());
+	FixLocationAlongSpline();
+
+	// @TODO: Will it work when we will want to execute the space as if from other space
+	RecalculateMoveSpace();
+
+	LocalToMoveSpace = MoveSpace.Transform * GetUpdatedComponent()->GetComponentTransform().Inverse();
+	// Now we need to fix the the X of the transform's location.
+	// It's already to be near-zero because origins of the Move and Local spaces are to have the same X.
+	// because the X axis is the same for both 
+	FixLocalToMoveSpace();
 }
 
 /*
