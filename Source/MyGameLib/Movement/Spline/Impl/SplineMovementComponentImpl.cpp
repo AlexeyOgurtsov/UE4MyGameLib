@@ -260,7 +260,9 @@ void USplineMovementComponentImpl::MoveTick(float const DeltaTime)
 			if(IsMovementAttachedToSpline())
 			{
 				UpdateSplineTransformFromWorld();
-				RecalculateMoveSpace(bTargetDestinationOnSpline, bWithBlend);
+				// Warning! We cannot count on calculated state-dependend variables any more,
+				// because the state may be changed at this point!
+				RecalculateMoveSpace();
 				FixVelocityInWorldSpace(MovementComponent->Velocity);
 			}
 		}
