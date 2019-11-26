@@ -1,5 +1,7 @@
 #include "SplineMovementComponentImpl.h"
+#include "GameUtil/Math/GameMath.h"
 #include "Util/Core/LogUtilLib.h"
+
 #include "GameFramework/MovementComponent.h"
 #include "Components/SplineComponent.h"
 #include "Math/UnrealMathUtility.h"
@@ -326,24 +328,8 @@ FTransform USplineMovementComponentImpl::GetSplineToWorld() const
 
 void USplineMovementComponentImpl::RecalculateTrackingSpeed(float const DeltaTime)
 {
-	float const TargetSpeed = GetTargetTrackingSpeed();
-	if(FMath::IsNearlyEqual(TargetSpeed, Phys.Tracking.Speed))
-	{
-		Phys.Tracking.Speed = TargetSpeed;
-	}
-	else
-	{
-		if(TargetSpeed - GetTrackingSpeed() < 0)
-		{
-			Phys.Tracking.Speed -= DeltaTime * GetConfig().Phys.Tracking.Deceleration;
-			Phys.Tracking.Speed = FMath::Max(TargetSpeed, Phys.Tracking.Speed);
-		}	
-		else
-		{
-			Phys.Tracking.Speed += DeltaTime * GetConfig().Phys.Tracking.Acceleration;
-			Phys.Tracking.Speed = FMath::Min(TargetSpeed, Phys.Tracking.Speed);
-		}
-	}
+	FGameFloatUpdate const SpeedUpdate { GetConfig().Phys.Tracking.Acceleration, GetConfig().Phys.Tracking.Deceleration };
+	Phys.Tracking.Speed = UGameMath::GetFloatUpdatedToTarget(DeltaTime, Phys.Tracking.Speed, GetTargetTrackingSpeed(), SpeedUpdate);
 }
 
 /**
