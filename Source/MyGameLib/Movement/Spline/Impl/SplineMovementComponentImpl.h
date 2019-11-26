@@ -141,6 +141,20 @@ public:
 	*/
 	FVector GetMoveSpaceVelocity(bool bInAddTrackSpeed = true) const;
 
+	/**
+	* Sets the velocity in the space we currently moving in.
+	*
+	* @param bTrackingAccountedInVelocity If true, then tracking is already accounted in the new velocity, and will be removed.
+	*/
+	void SetVelocityInMoveSpace(const FVector& InVelocity, bool bTrackingAccountedInVelocity = false);
+
+	/**
+	* Sets the velocity in the world space.
+	*
+	* @param bTrackingAccountedInVelocity If true, then tracking is already accounted in the new velocity, and will be removed.
+	*/
+	void SetVelocityInWorldSpace(const FVector& InVelocity, bool bTrackingAccountedInVelocity = false);
+
 	/** Current tracking speed */
 	float GetTrackingSpeed() const;
 
@@ -278,6 +292,9 @@ private:
 
 	FTransform LocalToMoveSpace;
 	float LocationAlongSpline = 0.0F;
+
+	void FixVelocityInWorldSpace(const FVector& InVelocity, bool bTrackingAccountedInVelocity = true);
+	void FixVelocityInMoveSpace(const FVector& InVelocity, bool bTrackingAccountedInVelocity = true);
 
 	FSplineMovementPhysState Phys;
 

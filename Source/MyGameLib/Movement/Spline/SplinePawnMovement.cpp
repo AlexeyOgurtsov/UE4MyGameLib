@@ -176,6 +176,16 @@ FVector USplinePawnMovement::GetMoveSpaceVelocity(bool const bInAddTrackSpeed) c
 	return Impl->GetMoveSpaceVelocity(bInAddTrackSpeed);
 }
 
+void USplinePawnMovement::SetVelocityInMoveSpace(const FVector& InVelocity, bool bTrackingAccountedInVelocity)
+{
+	return Impl->SetVelocityInMoveSpace(InVelocity, bTrackingAccountedInVelocity);
+}
+
+void USplinePawnMovement::SetVelocityInWorldSpace(const FVector& InVelocity, bool bTrackingAccountedInVelocity)
+{
+	return Impl->SetVelocityInWorldSpace(InVelocity, bTrackingAccountedInVelocity);
+}
+
 float USplinePawnMovement::GetTrackingSpeed() const
 {
 	return Impl->GetTrackingSpeed();

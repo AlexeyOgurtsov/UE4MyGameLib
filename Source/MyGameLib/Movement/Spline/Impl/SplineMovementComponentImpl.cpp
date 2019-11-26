@@ -318,7 +318,7 @@ void USplineMovementComponentImpl::UpdateSplinePhysParamsFromWorld()
 {
 	M_LOGFUNC();
 	UpdateSplineTransformFromWorld();
-	// @TODO: Update velocity here
+	FixVelocityInWorldSpace(MovementComponent->Velocity);
 }
 
 /**
@@ -331,6 +331,46 @@ void USplineMovementComponentImpl::UpdateSplineTransformFromWorld()
 {
 	M_LOGFUNC();
 	// @TODO
+}
+
+/*
+* Calculates the Velocity parameters from the given velocity in the world space.
+* @warn: Does NOT update the world-space Velocity.
+*
+* @param InVelocity: velocity in the world space.
+**/
+void USplineMovementComponentImpl::FixVelocityInWorldSpace(const FVector& InVelocity, bool bTrackingAccountedInVelocity)
+{
+	FixVelocityInMoveSpace(GetSplineToWorld().InverseTransformVectorNoScale(InVelocity), bTrackingAccountedInVelocity);
+}
+
+/*
+* Calculates the Velocity parameters from the given velocity in the movement space.
+* @warn: Does NOT update the world-space Velocity.
+*
+* @param InVelocity: velocity in the move space.
+**/
+void USplineMovementComponentImpl::FixVelocityInMoveSpace(const FVector& InVelocity, bool bTrackingAccountedInVelocity)
+{
+	Phys.MoveSpaceVelocity = InVelocity;
+	if(bTrackingAccountedInVelocity)
+	{
+		Phys.MoveSpaceVelocity.X -= GetTrackingSpeed();
+	}
+	// @TODO: Should we limit according to max speed here?
+}
+
+void USplineMovementComponentImpl::SetVelocityInMoveSpace(const FVector& InVelocity, bool bTrackingAccountedInVelocity)
+{
+	FixVelocityInMoveSpace(InVelocity, bTrackingAccountedInVelocity);
+	// @TODO: Update the Velocity vector here
+}
+
+
+void USplineMovementComponentImpl::SetVelocityInWorldSpace(const FVector& InVelocity, bool bTrackingAccountedInVelocity)
+{
+	FixVelocityInWorldSpace(InVelocity, bTrackingAccountedInVelocity);
+	MovementComponent->Velocity = InVelocity;
 }
 /**
 * Calculate the move space to world transform as if the current mode is a free movement mode.

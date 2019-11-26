@@ -76,6 +76,12 @@ public:
 	UFUNCTION(BlueprintGetter, Category = Spline)
 	FVector GetMoveSpaceVelocity(bool bInAddTrackSpeed = true) const;
 
+	UFUNCTION(BlueprintCallable, Category = Spline)
+	void SetVelocityInMoveSpace(const FVector& InVelocity, bool bTrackingAccountedInVelocity = false);
+
+	UFUNCTION(BlueprintCallable, Category = Spline)
+	void SetVelocityInWorldSpace(const FVector& InVelocity, bool bTrackingAccountedInVelocity = false);
+
 	UFUNCTION(BlueprintGetter, Category = Spline)
 	float GetTrackingSpeed() const;
 
