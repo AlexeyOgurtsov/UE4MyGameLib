@@ -49,8 +49,13 @@ void USplinePawnMovement::TickComponent(float const DeltaTime, enum ELevelTick c
 		return;
 	}
 
-	// @TODO: Check for AI Controller case
-	Impl->SetPendingInputVector(GetPendingInputVector());
+	if(Controller->IsLocalController())
+	{
+		if(Controller->IsLocalPlayerController() || ! Controller->IsFollowingAPath())
+		{
+			Impl->SetPendingInputVector(GetPendingInputVector());
+		}
+	}
 
 	Impl->MoveTick(DeltaTime);
 	

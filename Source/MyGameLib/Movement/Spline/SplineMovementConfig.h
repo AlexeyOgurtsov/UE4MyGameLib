@@ -61,6 +61,13 @@ struct FSplineMovementAttachRules
 	bool bAllowAttachingControl = true;
 
 	/**
+	* Should we automatically detach from the spline when we received a blocking hit
+	* in the attached state.
+	*/
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bDetachOnBlockingHit = false;
+
+	/**
 	* Initial transform of the local space to the move space when attached the first time.
 	* @warn: X is the initial location along the spline.
 	*/

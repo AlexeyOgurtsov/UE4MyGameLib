@@ -273,6 +273,9 @@ private:
 
 	FTransform GetMoveSpaceToWorld_ForFreeMovement() const;
 
+	void UpdateSplineTransformFromWorld();
+	void UpdateSplinePhysParamsFromWorld();
+
 	FTransform LocalToMoveSpace;
 	float LocationAlongSpline = 0.0F;
 

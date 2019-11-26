@@ -157,6 +157,7 @@ void USplineMovementComponentImpl::MoveTick(float const DeltaTime)
 	bool bAllowMoveControl = true;
 	bool bSweep = true;
 	bool bWithBlend = false;
+	bool bDetachOnBlockingHit = false;
 	switch(AttachState.State)
 	{
 	case ESplineMovementAttachState::Detached:
@@ -170,6 +171,7 @@ void USplineMovementComponentImpl::MoveTick(float const DeltaTime)
 		// WARNING! We should not check here whether we should blend based on the config,
 		// because the go-to-state functions should already check it.
 		bWithBlend = true;
+		bDetachOnBlockingHit = true;
 		break;
 	
 	case ESplineMovementAttachState::Attached:
@@ -177,6 +179,7 @@ void USplineMovementComponentImpl::MoveTick(float const DeltaTime)
 		bAllowMoveControl = true;
 		bSweep = true;
 		bWithBlend = false;
+		bDetachOnBlockingHit = GetConfig().AttachRules.bDetachOnBlockingHit;
 		break;
 
 	default:
@@ -263,17 +266,36 @@ void USplineMovementComponentImpl::MoveTick(float const DeltaTime)
 		}
 	}
 
-	{
-		FHitResult Hit;
-		bool const bMoved = MovementComponent->MoveUpdatedComponent(DeltaLocation, NewRotation, bSweep, &Hit);
-		// @TODO: Handle hit + slide
-	}
 
-	// @TODO: Attaching state goes to detached when we received a blocking hit
-	
 	{
 		MovementComponent->Velocity = MoveSpaceToWorld.TransformVectorNoScale(GetMoveSpaceVelocity());
 		MovementComponent->Velocity += MoveSpaceBlendVelocity * DeltaTime;
+	}
+
+	{
+		FHitResult Hit(1.f);
+		bool const bMoved = MovementComponent->SafeMoveUpdatedComponent(DeltaLocation, NewRotation, bSweep, Hit);
+		if(Hit.IsValidBlockingHit())
+		{
+			M_LOG(TEXT("Blocking hit while calling SafeMoveUpdatedComponent"));
+
+			MovementComponent->HandleImpact(Hit, DeltaTime, DeltaLocation);
+			MovementComponent->SlideAlongSurface(DeltaLocation, 1.f-Hit.Time, Hit.Normal, Hit, true);
+
+			if(bDetachOnBlockingHit)
+			{
+				if( ! IsFreeMovement() )
+				{
+					M_LOG(TEXT("Detaching because of blocking hit"));
+					GotoState_Detached();
+				}
+			}
+
+			if(IsMovementAttachedToSpline())
+			{
+				UpdateSplinePhysParamsFromWorld();
+			}
+		}
 	}
 	
 	if(AttachState.State == ESplineMovementAttachState::Attaching)
@@ -287,6 +309,30 @@ void USplineMovementComponentImpl::MoveTick(float const DeltaTime)
 }
 
 /**
+* Fixups all spline physics params from the world:
+* - transform and location along the spline (@see UpdateSplineTransformFromWorld)
+* - on-spline velocity from world space velocity;
+* @warn: Should NOT be called in the attaching state! (@see UpdateSplineTransformFromWorld)
+*/
+void USplineMovementComponentImpl::UpdateSplinePhysParamsFromWorld()
+{
+	M_LOGFUNC();
+	UpdateSplineTransformFromWorld();
+	// @TODO: Update velocity here
+}
+
+/**
+* Fixups:
+* - location along the spline ();
+* - on-spline space transform from world space transform;
+* @warn: Should NOT be called in the attaching state!
+*/
+void USplineMovementComponentImpl::UpdateSplineTransformFromWorld()
+{
+	M_LOGFUNC();
+	// @TODO
+}
+/**
 * Calculate the move space to world transform as if the current mode is a free movement mode.
 */
 FTransform USplineMovementComponentImpl::GetMoveSpaceToWorld_ForFreeMovement() const
@@ -299,7 +345,19 @@ FTransform USplineMovementComponentImpl::GetMoveSpaceToWorld_ForFreeMovement() c
 void USplineMovementComponentImpl::OnComponentTeleported()
 {
 	M_LOGFUNC();
-	// @TODO
+
+	if( IsMovementAttachedToSpline() )
+	{
+		M_LOG(TEXT("Teleported - recalculating new spline transform"));
+		UpdateSplineTransformFromWorld();
+	}
+	else if ( IsAttachingMovementToSplineNow() )
+	{
+		M_LOG(TEXT("Teleported - detaching from spline"));
+		GotoState_Detached();
+	}
+
+	// @TODO: ???
 }
 
 void USplineMovementComponentImpl::StopMovementImmediately()
