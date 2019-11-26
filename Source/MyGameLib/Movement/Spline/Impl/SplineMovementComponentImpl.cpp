@@ -9,6 +9,9 @@
 #include "Engine/World.h"
 
 /**
+* Bugs @TODO:
+* 1. Check the MoveSpace calculation.
+*
 * @TODO Events:
 * 1. Attaching/Detaching/Attached states etc.
 * 1.0. Call the events (+DONE)
@@ -256,7 +259,9 @@ void USplineMovementComponentImpl::MoveTick(float const DeltaTime)
 
 			if(IsMovementAttachedToSpline())
 			{
-				UpdateSplinePhysParamsFromWorld();
+				UpdateSplineTransformFromWorld();
+				RecalculateMoveSpace(bTargetDestinationOnSpline, bWithBlend);
+				FixVelocityInWorldSpace(MovementComponent->Velocity);
 			}
 		}
 	}
@@ -348,19 +353,6 @@ void USplineMovementComponentImpl::RecalculateMoveSpace(bool bTargetDestinationO
 	{
 		MoveSpace.Transform = GetMoveSpaceToWorld_ForFreeMovement();
 	}
-}
-
-/**
-* Fixups all spline physics params from the world:
-* - transform and location along the spline (@see UpdateSplineTransformFromWorld)
-* - on-spline velocity from world space velocity;
-* @warn: Should NOT be called in the attaching state! (@see UpdateSplineTransformFromWorld)
-*/
-void USplineMovementComponentImpl::UpdateSplinePhysParamsFromWorld()
-{
-	M_LOGFUNC();
-	UpdateSplineTransformFromWorld();
-	FixVelocityInWorldSpace(MovementComponent->Velocity);
 }
 
 /**

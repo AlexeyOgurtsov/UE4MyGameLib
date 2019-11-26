@@ -328,7 +328,6 @@ private:
 	mutable FSplineMovementMoveSpace MoveSpace;
 
 	void UpdateSplineTransformFromWorld();
-	void UpdateSplinePhysParamsFromWorld();
 
 	FTransform LocalToMoveSpace;
 	float LocationAlongSpline = 0.0F;
