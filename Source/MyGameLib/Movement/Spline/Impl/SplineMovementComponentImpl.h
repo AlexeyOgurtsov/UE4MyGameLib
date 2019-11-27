@@ -21,6 +21,7 @@ enum class ESplineMovementSimulationResetFlags : uint8
 	/** Keeping velocity in world space when resetting*/
 	, KeepWorldSpaceVelocity = 1 << 2
 };
+ENUM_CLASS_FLAGS(ESplineMovementSimulationResetFlags);
 
 USTRUCT()
 struct FSplineMovementTrackState
@@ -343,7 +344,7 @@ private:
 	*/
 	mutable FSplineMovementMoveSpace MoveSpace;
 
-	void ResetMoveSpaceAndParamsFromWorldSpace(ESplineMovementSimulationResetFlags InFlags);
+	void ResetSplineMoveSpaceAndParamsFromWorldSpace(ESplineMovementSimulationResetFlags InFlags);
 	void FixLocationAlongSplineFromWorldSpace();
 	void FixRotationFromWorldSpace();
 	void FixLocationFromWorldSpace();

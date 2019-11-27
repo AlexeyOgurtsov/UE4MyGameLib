@@ -260,7 +260,7 @@ void USplineMovementComponentImpl::MoveTick(float const DeltaTime)
 
 			if(IsMovementAttachedToSpline())
 			{
-				ResetMoveSpaceAndParamsFromWorldSpace
+				ResetSplineMoveSpaceAndParamsFromWorldSpace
 				(
 					ESplineMovementSimulationResetFlags::KeepWorldSpaceLocation | 
 				       	ESplineMovementSimulationResetFlags::KeepWorldSpaceVelocity
@@ -360,13 +360,22 @@ void USplineMovementComponentImpl::RecalculateMoveSpace(bool bTargetDestinationO
 
 /**
 * Recalculates parameters of the simulation from the world-space state.
+* Parameters are recalculate as if were moved on the spline at the current Location-along-spline!
 * Recalculates the MoveSpace by itself.
 */
-void USplineMovementComponentImpl::ResetMoveSpaceAndParamsFromWorldSpace(ESplineMovementSimulationResetFlags InFlags)
+void USplineMovementComponentImpl::ResetSplineMoveSpaceAndParamsFromWorldSpace(ESplineMovementSimulationResetFlags InFlags)
 {
-	FixLocationAlongSplineFromWorldSpace();
-	RecalculateMoveSpace();
-	if((InFlags & ESplineMovementSimulationResetFlags::KeepWorldSpaceLocation) != ESplineMovementSimulationResetFlags::None)
+	bool const bKeepWorldLocation = (InFlags & ESplineMovementSimulationResetFlags::KeepWorldSpaceLocation) != ESplineMovementSimulationResetFlags::None;
+	if(bKeepWorldLocation)
+	{
+		FixLocationAlongSplineFromWorldSpace();
+	}
+	// Warning! We always must recalculate the move space here,
+	// ever if location along spline is not changed, because
+	// we could be in the detached state right before calling this function!
+	MoveSpace.Transform = GetSplineToWorld();
+
+	if(bKeepWorldLocation)
 	{
 		FixLocationFromWorldSpace();
 	}
@@ -481,7 +490,7 @@ void USplineMovementComponentImpl::OnComponentTeleported()
 	if( IsMovementAttachedToSpline() )
 	{
 		M_LOG(TEXT("Teleported - recalculating new spline transform"));
-		ResetMoveSpaceAndParamsFromWorldSpace(ESplineMovementSimulationResetFlags::KeepWorldLocation | ESplineMovementSimulationResetFlags::KeepWorldRotation);
+		ResetSplineMoveSpaceAndParamsFromWorldSpace(ESplineMovementSimulationResetFlags::KeepWorldSpaceLocation | ESplineMovementSimulationResetFlags::KeepWorldSpaceRotation);
 	}
 	else if ( IsAttachingMovementToSplineNow() )
 	{
@@ -805,27 +814,22 @@ bool USplineMovementComponentImpl::GotoState_Attaching()
 	bool const bKeepWorldRotation = bKeepWorldLocationAndRotation;
 
 	{
-		// WARNING! This if should be executed before the rotation if,
-		// because the rotation if depends on the updated location along the spline!
+		ESplineMovementSimulationResetFlags SimulationResetFlags = ESplineMovementSimulationResetFlags::None;
 		if(bKeepWorldLocation)
 		{
-			// @TODO: Recalculate location along the spline
-
-			// @TODO: Recalculate new LocalToMoveSpace location
+			SimulationResetFlags |= ESplineMovementSimulationResetFlags::KeepWorldSpaceLocation;
 		}
-
 		if(bKeepWorldRotation)
 		{
-			// @TODO: Recalculate new LocalToMoveSpace rotation
+			SimulationResetFlags |= ESplineMovementSimulationResetFlags::KeepWorldSpaceRotation;
 		}
+		ResetSplineMoveSpaceAndParamsFromWorldSpace(SimulationResetFlags);
 	}
-
 
 	if(bAttachInstantly)
 	{
-		{
-			// Move to the new transform in spline space (which is the current move space now)
-			FTransform const NewTransform = LocalToMoveSpace * GetSplineToWorld();
+		{	
+			FTransform const NewTransform = LocalToMoveSpace * MoveSpace.Transform;
 			FVector const DeltaLocation = NewTransform.GetLocation() - GetUpdatedComponent()->GetComponentLocation();
 			FRotator const NewRotation = NewTransform.Rotator();
 			bool constexpr bSweep = false;
@@ -839,9 +843,11 @@ bool USplineMovementComponentImpl::GotoState_Attaching()
 	else
 	{
 		M_LOG(TEXT("GotoState: Attaching (Smooth transition)"));
+
+		// @TODO: It it really necessary? Looks like bug!
 		// Move-space location offset is not used in the detached state, 
-		// so to make smooth transition, we must reset it.
-		LocalToMoveSpace.SetLocation(FVector::ZeroVector);
+		// so to make smooth transition, we must reset the target blend destination location.
+		//LocalToMoveSpace.SetLocation(FVector::ZeroVector);
 		FTransform const OldMoveSpaceToWorld = GetMoveSpaceToWorld_ForFreeMovement();
 		AttachState.SetAttaching(OldMoveSpaceToWorld);
 		MovementBeginAttachingToSpline.Broadcast();
