@@ -327,13 +327,15 @@ private:
 	*/
 	mutable FSplineMovementMoveSpace MoveSpace;
 
+	void FixRotationFromWorldSpace();
+	void FixLocationFromWorldSpace();
 	void UpdateSplineTransformFromWorld();
 
 	FTransform LocalToMoveSpace;
 	float LocationAlongSpline = 0.0F;
 
-	void FixVelocityInWorldSpace(const FVector& InVelocity, bool bTrackingAccountedInVelocity = true);
-	void FixVelocityInMoveSpace(const FVector& InVelocity, bool bTrackingAccountedInVelocity = true);
+	void SetOnlyMoveSpaceVelocity_InWorldSpace(const FVector& InVelocity, bool bTrackingAccountedInVelocity = true);
+	void SetOnlyMoveSpaceVelocity(const FVector& InVelocity, bool bTrackingAccountedInVelocity = true);
 
 	FSplineMovementPhysState Phys;
 

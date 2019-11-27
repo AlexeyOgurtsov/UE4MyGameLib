@@ -263,7 +263,7 @@ void USplineMovementComponentImpl::MoveTick(float const DeltaTime)
 				UpdateSplineTransformFromWorld();
 				// Note: It's unnecessary to recalculate the move space here,
 				// because it's automatically recalculated while updating the transform
-				FixVelocityInWorldSpace(MovementComponent->Velocity);
+				SetOnlyMoveSpaceVelocity_InWorldSpace(MovementComponent->Velocity);
 			}
 		}
 	}
@@ -358,6 +358,33 @@ void USplineMovementComponentImpl::RecalculateMoveSpace(bool bTargetDestinationO
 }
 
 /**
+* Recalculates the local-to-move-space transform's location from the actor's location in world space
+* Assumes that the MoveSpace matrix is valid.
+* Must work from any state (attaching/attached/detached).
+*/
+void USplineMovementComponentImpl::FixLocationFromWorldSpace()
+{
+	FVector const MoveToLocalDelta = FTransform::SubtractTranslations(GetUpdatedComponent()->GetComponentTransform(), MoveSpace.Transform);
+	LocalToMoveSpace.SetLocation(MoveToLocalDelta);
+	
+	// Now we need to fix the the X of the transform's location.
+	// It's already to be near-zero because origins of the Move and Local spaces are to have the same X.
+	// (X axis is the same for both).
+	FixLocalToMoveSpace();
+}
+
+/**
+* Recalculates the local-to-move-space transform's rotation from the actor's rotation in world space
+* Assumes that the MoveSpace matrix is valid.
+* Must work from any state (attaching/attached/detached).
+*/
+void USplineMovementComponentImpl::FixRotationFromWorldSpace()
+{
+	FQuat const MoveToLocalRotation = MoveSpace.Transform.GetRotation().Inverse() * GetUpdatedComponent()->GetComponentQuat();
+	LocalToMoveSpace.SetRotation(MoveToLocalRotation);
+}
+
+/**
 * Fixups:
 * - location along the spline ();
 * - on-spline space transform from world space transform;
@@ -368,38 +395,37 @@ void USplineMovementComponentImpl::UpdateSplineTransformFromWorld()
 	M_LOGFUNC();
 
 	// Update location along the spline
-	// WARNING! Note that we're calculating APPROXIMATE distnace along the spline!
+	// WARNING! Note that we're calculating APPROXIMATE distance along the spline!
 	LocationAlongSpline = UMySplineUtil::GetDistanceAlongSplineClosestToPoint(GetSplineComponent(), GetUpdatedComponent()->GetComponentLocation());
 	FixLocationAlongSpline();
 
 	// @TODO: Will it work when we will want to execute the space as if from other space
 	RecalculateMoveSpace();
 
-	LocalToMoveSpace = MoveSpace.Transform * GetUpdatedComponent()->GetComponentTransform().Inverse();
-	// Now we need to fix the the X of the transform's location.
-	// It's already to be near-zero because origins of the Move and Local spaces are to have the same X.
-	// because the X axis is the same for both 
-	FixLocalToMoveSpace();
+	FixLocationFromWorldSpace();
+	FixRotationFromWorldSpace();
+
+	//LocalToMoveSpace = MoveSpace.Transform * GetUpdatedComponent()->GetComponentTransform().Inverse();
 }
 
 /*
-* Calculates the Velocity parameters from the given velocity in the world space.
+* Sets the move-space velocity from the given velocity in the world space optionally accounting tracking.
 * @warn: Does NOT update the world-space Velocity.
 *
 * @param InVelocity: velocity in the world space.
 **/
-void USplineMovementComponentImpl::FixVelocityInWorldSpace(const FVector& InVelocity, bool bTrackingAccountedInVelocity)
+void USplineMovementComponentImpl::SetOnlyMoveSpaceVelocity_InWorldSpace(const FVector& InVelocity, bool bTrackingAccountedInVelocity)
 {
-	FixVelocityInMoveSpace(MoveSpace.Transform.InverseTransformVectorNoScale(InVelocity), bTrackingAccountedInVelocity);
+	SetOnlyMoveSpaceVelocity(MoveSpace.Transform.InverseTransformVectorNoScale(InVelocity), bTrackingAccountedInVelocity);
 }
 
 /*
-* Calculates the Velocity parameters from the given velocity in the movement space.
+* Sets the move-space velocity optionally accounting tracking.
 * @warn: Does NOT update the world-space Velocity.
 *
 * @param InVelocity: velocity in the move space.
 **/
-void USplineMovementComponentImpl::FixVelocityInMoveSpace(const FVector& InVelocity, bool bTrackingAccountedInVelocity)
+void USplineMovementComponentImpl::SetOnlyMoveSpaceVelocity(const FVector& InVelocity, bool bTrackingAccountedInVelocity)
 {
 	Phys.MoveSpaceVelocity = InVelocity;
 	if(bTrackingAccountedInVelocity)
@@ -412,7 +438,7 @@ void USplineMovementComponentImpl::FixVelocityInMoveSpace(const FVector& InVeloc
 void USplineMovementComponentImpl::SetVelocityInMoveSpace(const FVector& InVelocity, bool bTrackingAccountedInVelocity)
 {
 	RecalculateMoveSpace();
-	FixVelocityInMoveSpace(InVelocity, bTrackingAccountedInVelocity);
+	SetOnlyMoveSpaceVelocity(InVelocity, bTrackingAccountedInVelocity);
 	MovementComponent->Velocity = MoveSpace.Transform.TransformVectorNoScale(InVelocity);
 	MovementComponent->UpdateComponentVelocity();
 }
@@ -420,7 +446,7 @@ void USplineMovementComponentImpl::SetVelocityInMoveSpace(const FVector& InVeloc
 
 void USplineMovementComponentImpl::SetVelocityInWorldSpace(const FVector& InVelocity, bool bTrackingAccountedInVelocity)
 {
-	FixVelocityInWorldSpace(InVelocity, bTrackingAccountedInVelocity);
+	SetOnlyMoveSpaceVelocity_InWorldSpace(InVelocity, bTrackingAccountedInVelocity);
 	MovementComponent->Velocity = InVelocity;
 	MovementComponent->UpdateComponentVelocity();
 }
