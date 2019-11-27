@@ -6,6 +6,22 @@
 class UMovementComponent;
 class USplineComponent;
 
+
+enum class ESplineMovementSimulationResetFlags : uint8
+{
+	/** None*/
+	None = 0
+	
+	/** Keeping location in world space when resetting*/
+	, KeepWorldSpaceLocation = 1 << 0
+
+	/** Keeping rotation in world space when resetting*/
+	, KeepWorldSpaceRotation = 1 << 1
+
+	/** Keeping velocity in world space when resetting*/
+	, KeepWorldSpaceVelocity = 1 << 2
+};
+
 USTRUCT()
 struct FSplineMovementTrackState
 {
@@ -327,9 +343,10 @@ private:
 	*/
 	mutable FSplineMovementMoveSpace MoveSpace;
 
+	void ResetMoveSpaceAndParamsFromWorldSpace(ESplineMovementSimulationResetFlags InFlags);
+	void FixLocationAlongSplineFromWorldSpace();
 	void FixRotationFromWorldSpace();
 	void FixLocationFromWorldSpace();
-	void UpdateSplineTransformFromWorld();
 
 	FTransform LocalToMoveSpace;
 	float LocationAlongSpline = 0.0F;

@@ -260,10 +260,11 @@ void USplineMovementComponentImpl::MoveTick(float const DeltaTime)
 
 			if(IsMovementAttachedToSpline())
 			{
-				UpdateSplineTransformFromWorld();
-				// Note: It's unnecessary to recalculate the move space here,
-				// because it's automatically recalculated while updating the transform
-				SetOnlyMoveSpaceVelocity_InWorldSpace(MovementComponent->Velocity);
+				ResetMoveSpaceAndParamsFromWorldSpace
+				(
+					ESplineMovementSimulationResetFlags::KeepWorldSpaceLocation | 
+				       	ESplineMovementSimulationResetFlags::KeepWorldSpaceVelocity
+				);
 			}
 		}
 	}
@@ -358,6 +359,29 @@ void USplineMovementComponentImpl::RecalculateMoveSpace(bool bTargetDestinationO
 }
 
 /**
+* Recalculates parameters of the simulation from the world-space state.
+* Recalculates the MoveSpace by itself.
+*/
+void USplineMovementComponentImpl::ResetMoveSpaceAndParamsFromWorldSpace(ESplineMovementSimulationResetFlags InFlags)
+{
+	FixLocationAlongSplineFromWorldSpace();
+	RecalculateMoveSpace();
+	if((InFlags & ESplineMovementSimulationResetFlags::KeepWorldSpaceLocation) != ESplineMovementSimulationResetFlags::None)
+	{
+		FixLocationFromWorldSpace();
+	}
+	if((InFlags & ESplineMovementSimulationResetFlags::KeepWorldSpaceRotation) != ESplineMovementSimulationResetFlags::None)
+	{
+		FixRotationFromWorldSpace();
+	}
+	if((InFlags & ESplineMovementSimulationResetFlags::KeepWorldSpaceVelocity) != ESplineMovementSimulationResetFlags::None)
+	{
+		SetOnlyMoveSpaceVelocity_InWorldSpace(MovementComponent->Velocity);
+	}
+
+}
+
+/**
 * Recalculates the local-to-move-space transform's location from the actor's location in world space
 * Assumes that the MoveSpace matrix is valid.
 * Must work from any state (attaching/attached/detached).
@@ -384,28 +408,12 @@ void USplineMovementComponentImpl::FixRotationFromWorldSpace()
 	LocalToMoveSpace.SetRotation(MoveToLocalRotation);
 }
 
-/**
-* Fixups:
-* - location along the spline ();
-* - on-spline space transform from world space transform;
-* @warn: Should NOT be called in the attaching state!
-*/
-void USplineMovementComponentImpl::UpdateSplineTransformFromWorld()
+void USplineMovementComponentImpl::FixLocationAlongSplineFromWorldSpace()
 {
-	M_LOGFUNC();
-
 	// Update location along the spline
 	// WARNING! Note that we're calculating APPROXIMATE distance along the spline!
 	LocationAlongSpline = UMySplineUtil::GetDistanceAlongSplineClosestToPoint(GetSplineComponent(), GetUpdatedComponent()->GetComponentLocation());
 	FixLocationAlongSpline();
-
-	// @TODO: Will it work when we will want to execute the space as if from other space
-	RecalculateMoveSpace();
-
-	FixLocationFromWorldSpace();
-	FixRotationFromWorldSpace();
-
-	//LocalToMoveSpace = MoveSpace.Transform * GetUpdatedComponent()->GetComponentTransform().Inverse();
 }
 
 /*
@@ -473,7 +481,7 @@ void USplineMovementComponentImpl::OnComponentTeleported()
 	if( IsMovementAttachedToSpline() )
 	{
 		M_LOG(TEXT("Teleported - recalculating new spline transform"));
-		UpdateSplineTransformFromWorld();
+		ResetMoveSpaceAndParamsFromWorldSpace(ESplineMovementSimulationResetFlags::KeepWorldLocation | ESplineMovementSimulationResetFlags::KeepWorldRotation);
 	}
 	else if ( IsAttachingMovementToSplineNow() )
 	{
