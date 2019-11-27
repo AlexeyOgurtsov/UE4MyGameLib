@@ -32,15 +32,9 @@
 * 1. Allow to disable it (necessary for stop immediately)
 * 2. Provide tracking acceleration and deceleration
 *
-* @TODO Stop movement immediately (+DONE)
-*
 * @TODO Check world bounds
 *
 * @TODO Check max speed
-*
-* @TODO Update velocity
-*
-* @TODO On Teleported
 *
 * @TODO Receiving a blocking hit: we should alter our spline space velocity according to the updated velocity
 *
@@ -185,7 +179,7 @@ void USplineMovementComponentImpl::MoveTick(float const DeltaTime)
 		checkNoEntry();
 	}
 
-	RecalculateMoveSpace(bTargetDestinationOnSpline, bWithBlend);
+	RecalculateMoveSpace(GetUpdatedComponent(), bTargetDestinationOnSpline, bWithBlend);
 
 	FVector const MoveSpaceInputVector = MoveSpace.Transform.InverseTransformVectorNoScale(InputVector);	
 	FVector const MoveSpaceControlAcceleration = CalculateAccelerationFromInputVector(MoveSpaceInputVector, Phys.MoveSpaceVelocity);
@@ -262,6 +256,7 @@ void USplineMovementComponentImpl::MoveTick(float const DeltaTime)
 			{
 				ResetSplineMoveSpaceAndParamsFromWorldSpace
 				(
+					GetUpdatedComponent(),
 					ESplineMovementSimulationResetFlags::KeepWorldSpaceLocation | 
 				       	ESplineMovementSimulationResetFlags::KeepWorldSpaceVelocity
 				);
@@ -322,21 +317,20 @@ bool USplineMovementComponentImpl::ShouldTargetDestinationBeOnSpline() const
 	return false;
 }
 
-void USplineMovementComponentImpl::RecalculateMoveSpace() const
+void USplineMovementComponentImpl::RecalculateMoveSpace(const USceneComponent* const InUpdatedComponent) const
 {
-	RecalculateMoveSpace(ShouldTargetDestinationBeOnSpline(), IsWithBlend());
+	RecalculateMoveSpace(InUpdatedComponent, ShouldTargetDestinationBeOnSpline(), IsWithBlend());
 }
 
-void USplineMovementComponentImpl::RecalculateMoveSpace(bool bTargetDestinationOnSpline, bool bWithBlend) const
+void USplineMovementComponentImpl::RecalculateMoveSpace(const USceneComponent* const InUpdatedComponent, bool const bInTargetDestinationOnSpline, bool const bInWithBlend) const
 {
 	MoveSpace.MoveSpaceDetachedToTargetTranslation = FVector::ZeroVector;
 	MoveSpace.BlendVelocity = FVector::ZeroVector;
 
-	if(bTargetDestinationOnSpline)
+	if(bInTargetDestinationOnSpline)
 	{
-		// @TODO: Make it evident that we are dependent on the LocationAlongTheSpline here!
-		FTransform const TargetSplineToWorld = GetSplineToWorld();
-		if(bWithBlend)
+		FTransform const TargetSplineToWorld = GetSplineToWorldAt(LocationAlongSpline);
+		if(bInWithBlend)
 		{
 			float const AttachBlendTime = GetConfig().AttachRules.AttachBlendTime;
 			FTransform const MoveSpaceToWorld_BeforeAttachingStarted = AttachState.MoveSpaceToWorld_BeforeAttaching;
@@ -354,7 +348,7 @@ void USplineMovementComponentImpl::RecalculateMoveSpace(bool bTargetDestinationO
 	}
 	else
 	{
-		MoveSpace.Transform = GetMoveSpaceToWorld_ForFreeMovement();
+		MoveSpace.Transform = GetMoveSpaceToWorld_ForFreeMovement(InUpdatedComponent);
 	}
 }
 
@@ -363,25 +357,25 @@ void USplineMovementComponentImpl::RecalculateMoveSpace(bool bTargetDestinationO
 * Parameters are recalculate as if were moved on the spline at the current Location-along-spline!
 * Recalculates the MoveSpace by itself.
 */
-void USplineMovementComponentImpl::ResetSplineMoveSpaceAndParamsFromWorldSpace(ESplineMovementSimulationResetFlags InFlags)
+void USplineMovementComponentImpl::ResetSplineMoveSpaceAndParamsFromWorldSpace(const USceneComponent* const InUpdatedComponent, ESplineMovementSimulationResetFlags const InFlags)
 {
 	bool const bKeepWorldLocation = (InFlags & ESplineMovementSimulationResetFlags::KeepWorldSpaceLocation) != ESplineMovementSimulationResetFlags::None;
 	if(bKeepWorldLocation)
 	{
-		FixLocationAlongSplineFromWorldSpace();
+		FixLocationAlongSplineFromWorldSpace(InUpdatedComponent);
 	}
 	// Warning! We always must recalculate the move space here,
 	// ever if location along spline is not changed, because
 	// we could be in the detached state right before calling this function!
-	MoveSpace.Transform = GetSplineToWorld();
+	MoveSpace.Transform = GetSplineToWorldAt(LocationAlongSpline);
 
 	if(bKeepWorldLocation)
 	{
-		FixLocationFromWorldSpace();
+		FixLocationFromWorldSpace(InUpdatedComponent);
 	}
 	if((InFlags & ESplineMovementSimulationResetFlags::KeepWorldSpaceRotation) != ESplineMovementSimulationResetFlags::None)
 	{
-		FixRotationFromWorldSpace();
+		FixRotationFromWorldSpace(InUpdatedComponent);
 	}
 	if((InFlags & ESplineMovementSimulationResetFlags::KeepWorldSpaceVelocity) != ESplineMovementSimulationResetFlags::None)
 	{
@@ -395,9 +389,10 @@ void USplineMovementComponentImpl::ResetSplineMoveSpaceAndParamsFromWorldSpace(E
 * Assumes that the MoveSpace matrix is valid.
 * Must work from any state (attaching/attached/detached).
 */
-void USplineMovementComponentImpl::FixLocationFromWorldSpace()
+void USplineMovementComponentImpl::FixLocationFromWorldSpace(const USceneComponent* const InUpdatedComponent)
 {
-	FVector const MoveToLocalDelta = FTransform::SubtractTranslations(GetUpdatedComponent()->GetComponentTransform(), MoveSpace.Transform);
+	checkf(InUpdatedComponent, TEXT("When calling \"%s\" the updated component must be valid NON-null pointer"), TEXT(__FUNCTION__));
+	FVector const MoveToLocalDelta = FTransform::SubtractTranslations(InUpdatedComponent->GetComponentTransform(), MoveSpace.Transform);
 	LocalToMoveSpace.SetLocation(MoveToLocalDelta);
 	
 	// Now we need to fix the the X of the transform's location.
@@ -411,17 +406,19 @@ void USplineMovementComponentImpl::FixLocationFromWorldSpace()
 * Assumes that the MoveSpace matrix is valid.
 * Must work from any state (attaching/attached/detached).
 */
-void USplineMovementComponentImpl::FixRotationFromWorldSpace()
+void USplineMovementComponentImpl::FixRotationFromWorldSpace(const USceneComponent* const InUpdatedComponent)
 {
-	FQuat const MoveToLocalRotation = MoveSpace.Transform.GetRotation().Inverse() * GetUpdatedComponent()->GetComponentQuat();
+	checkf(InUpdatedComponent, TEXT("When calling \"%s\" the updated component must be valid NON-null pointer"), TEXT(__FUNCTION__));
+	FQuat const MoveToLocalRotation = MoveSpace.Transform.GetRotation().Inverse() * InUpdatedComponent->GetComponentQuat();
 	LocalToMoveSpace.SetRotation(MoveToLocalRotation);
 }
 
-void USplineMovementComponentImpl::FixLocationAlongSplineFromWorldSpace()
+void USplineMovementComponentImpl::FixLocationAlongSplineFromWorldSpace(const USceneComponent* const InUpdatedComponent)
 {
+	checkf(InUpdatedComponent, TEXT("When calling \"%s\" the updated component must be valid"), TEXT(__FUNCTION__));
 	// Update location along the spline
 	// WARNING! Note that we're calculating APPROXIMATE distance along the spline!
-	LocationAlongSpline = UMySplineUtil::GetDistanceAlongSplineClosestToPoint(GetSplineComponent(), GetUpdatedComponent()->GetComponentLocation());
+	LocationAlongSpline = UMySplineUtil::GetDistanceAlongSplineClosestToPoint(GetSplineComponent(), InUpdatedComponent->GetComponentLocation());
 	FixLocationAlongSpline();
 }
 
@@ -431,7 +428,7 @@ void USplineMovementComponentImpl::FixLocationAlongSplineFromWorldSpace()
 *
 * @param InVelocity: velocity in the world space.
 **/
-void USplineMovementComponentImpl::SetOnlyMoveSpaceVelocity_InWorldSpace(const FVector& InVelocity, bool bTrackingAccountedInVelocity)
+void USplineMovementComponentImpl::SetOnlyMoveSpaceVelocity_InWorldSpace(const FVector& InVelocity, bool const bTrackingAccountedInVelocity)
 {
 	SetOnlyMoveSpaceVelocity(MoveSpace.Transform.InverseTransformVectorNoScale(InVelocity), bTrackingAccountedInVelocity);
 }
@@ -442,7 +439,7 @@ void USplineMovementComponentImpl::SetOnlyMoveSpaceVelocity_InWorldSpace(const F
 *
 * @param InVelocity: velocity in the move space.
 **/
-void USplineMovementComponentImpl::SetOnlyMoveSpaceVelocity(const FVector& InVelocity, bool bTrackingAccountedInVelocity)
+void USplineMovementComponentImpl::SetOnlyMoveSpaceVelocity(const FVector& InVelocity, bool const bTrackingAccountedInVelocity)
 {
 	Phys.MoveSpaceVelocity = InVelocity;
 	if(bTrackingAccountedInVelocity)
@@ -452,16 +449,19 @@ void USplineMovementComponentImpl::SetOnlyMoveSpaceVelocity(const FVector& InVel
 	// @TODO: Should we limit according to max speed here?
 }
 
-void USplineMovementComponentImpl::SetVelocityInMoveSpace(const FVector& InVelocity, bool bTrackingAccountedInVelocity)
+void USplineMovementComponentImpl::SetVelocityInMoveSpace(const FVector& InVelocity, bool const bTrackingAccountedInVelocity)
 {
-	RecalculateMoveSpace();
 	SetOnlyMoveSpaceVelocity(InVelocity, bTrackingAccountedInVelocity);
-	MovementComponent->Velocity = MoveSpace.Transform.TransformVectorNoScale(InVelocity);
-	MovementComponent->UpdateComponentVelocity();
+	if(const USceneComponent* UpdatedComponent = GetUpdatedComponent())
+	{
+		RecalculateMoveSpace(UpdatedComponent);
+		MovementComponent->Velocity = MoveSpace.Transform.TransformVectorNoScale(InVelocity);
+		MovementComponent->UpdateComponentVelocity();
+	}
 }
 
 
-void USplineMovementComponentImpl::SetVelocityInWorldSpace(const FVector& InVelocity, bool bTrackingAccountedInVelocity)
+void USplineMovementComponentImpl::SetVelocityInWorldSpace(const FVector& InVelocity, bool const bTrackingAccountedInVelocity)
 {
 	SetOnlyMoveSpaceVelocity_InWorldSpace(InVelocity, bTrackingAccountedInVelocity);
 	MovementComponent->Velocity = InVelocity;
@@ -470,16 +470,18 @@ void USplineMovementComponentImpl::SetVelocityInWorldSpace(const FVector& InVelo
 /**
 * Calculate the move space to world transform as if the current mode is a free movement mode.
 */
-FTransform USplineMovementComponentImpl::GetMoveSpaceToWorld_ForFreeMovement() const
+FTransform USplineMovementComponentImpl::GetMoveSpaceToWorld_ForFreeMovement(const USceneComponent* const InUpdatedComponent) const
 {
-	// @TODO: Is it correct?
 	// Remove rotation of the local coordinate system relative to the move space
-	return GetUpdatedComponent()->GetComponentTransform() * LocalToMoveSpace.GetRotation().Inverse();
+	return InUpdatedComponent->GetComponentTransform() * LocalToMoveSpace.GetRotation().Inverse();
 }
 
 const FTransform& USplineMovementComponentImpl::GetMoveSpaceToWorld() const
 {
-	RecalculateMoveSpace();
+	if(const USceneComponent* UpdatedComponent = GetUpdatedComponent())
+	{
+		RecalculateMoveSpace(UpdatedComponent);
+	}
 	return MoveSpace.Transform;
 }
 
@@ -490,7 +492,7 @@ void USplineMovementComponentImpl::OnComponentTeleported()
 	if( IsMovementAttachedToSpline() )
 	{
 		M_LOG(TEXT("Teleported - recalculating new spline transform"));
-		ResetSplineMoveSpaceAndParamsFromWorldSpace(ESplineMovementSimulationResetFlags::KeepWorldSpaceLocation | ESplineMovementSimulationResetFlags::KeepWorldSpaceRotation);
+		ResetSplineMoveSpaceAndParamsFromWorldSpace(GetUpdatedComponent(), ESplineMovementSimulationResetFlags::KeepWorldSpaceLocation | ESplineMovementSimulationResetFlags::KeepWorldSpaceRotation);
 	}
 	else if ( IsAttachingMovementToSplineNow() )
 	{
@@ -520,9 +522,13 @@ void USplineMovementComponentImpl::SetLocationAlongSpline(float const NewLocatio
 	FixLocationAlongSpline();
 }
 
-FTransform USplineMovementComponentImpl::GetSplineToWorld() const
+/**
+* Gets spline-to-world matrix at the given location along the spline.
+* @warn! The distance along the spline must already be fixed! 
+*/
+FTransform USplineMovementComponentImpl::GetSplineToWorldAt(float const InLocationAlongSpline) const
 {
-	return GetSplineComponent()->GetTransformAtDistanceAlongSpline(GetLocationAlongSpline(), ESplineCoordinateSpace::Type::World);
+	return GetSplineComponent()->GetTransformAtDistanceAlongSpline(InLocationAlongSpline, ESplineCoordinateSpace::Type::World);
 }
 
 void USplineMovementComponentImpl::RecalculateTrackingSpeed(float const DeltaTime)
@@ -564,7 +570,7 @@ float USplineMovementComponentImpl::GetTrackingSpeed() const
 	return Phys.Tracking.Speed;
 }
 
-void USplineMovementComponentImpl::SetTrackingSpeed(float InTargetSpeed)
+void USplineMovementComponentImpl::SetTrackingSpeed(float const InTargetSpeed)
 {
 	Phys.Tracking.TargetSpeed = FMath::Clamp(InTargetSpeed, 0.0F, 50000.0F);
 }
@@ -823,7 +829,7 @@ bool USplineMovementComponentImpl::GotoState_Attaching()
 		{
 			SimulationResetFlags |= ESplineMovementSimulationResetFlags::KeepWorldSpaceRotation;
 		}
-		ResetSplineMoveSpaceAndParamsFromWorldSpace(SimulationResetFlags);
+		ResetSplineMoveSpaceAndParamsFromWorldSpace(GetUpdatedComponent(), SimulationResetFlags);
 	}
 
 	if(bAttachInstantly)
@@ -848,7 +854,7 @@ bool USplineMovementComponentImpl::GotoState_Attaching()
 		// Move-space location offset is not used in the detached state, 
 		// so to make smooth transition, we must reset the target blend destination location.
 		//LocalToMoveSpace.SetLocation(FVector::ZeroVector);
-		FTransform const OldMoveSpaceToWorld = GetMoveSpaceToWorld_ForFreeMovement();
+		FTransform const OldMoveSpaceToWorld = GetMoveSpaceToWorld_ForFreeMovement(GetUpdatedComponent());
 		AttachState.SetAttaching(OldMoveSpaceToWorld);
 		MovementBeginAttachingToSpline.Broadcast();
 		return true;

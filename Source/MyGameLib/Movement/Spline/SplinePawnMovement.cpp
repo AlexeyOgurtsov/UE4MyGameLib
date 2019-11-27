@@ -201,11 +201,6 @@ float USplinePawnMovement::GetTargetTrackingSpeed() const
 	return Impl->GetTargetTrackingSpeed();
 }
 
-FTransform USplinePawnMovement::GetSplineToWorld() const
-{
-	return Impl->GetSplineToWorld();
-}
-
 const FTransform& USplinePawnMovement::GetMoveSpaceToWorld() const
 {
 	return Impl->GetMoveSpaceToWorld();

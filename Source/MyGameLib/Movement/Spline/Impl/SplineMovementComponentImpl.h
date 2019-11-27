@@ -206,11 +206,6 @@ public:
 	float GetTargetTrackingSpeed() const;
 
 	/**
-	* Transform from the spline space to the world space at current location along spline.
-	*/
-	FTransform GetSplineToWorld() const;
-
-	/**
 	* Transform from the move space to the world space.
 	* Always valid!
 	*/
@@ -323,7 +318,7 @@ private:
 	FSplineMovementAttachmentState AttachState;
 
 	// ~Spline attachnment End
-
+	FTransform GetSplineToWorldAt(float InLocationAlongSpline) const;
 	void FixLocationAlongSpline();
 	void FixLocalToMoveSpace();
 	void ResetToInitialTransformAndLocation();
@@ -331,10 +326,10 @@ private:
 	FVector UpdateMoveSpaceVelocity_AndReturnMoveDelta(float DeltaTime, const FVector& InAcceleration);
 	void RecalculateTrackingSpeed(float DeltaTime);
 
-	FTransform GetMoveSpaceToWorld_ForFreeMovement() const;
+	FTransform GetMoveSpaceToWorld_ForFreeMovement(const USceneComponent* InUpdatedComponent) const;
 
-	void RecalculateMoveSpace() const;
-	void RecalculateMoveSpace(bool bTargetDestinationOnSpline, bool bWithBlend) const;
+	void RecalculateMoveSpace(const USceneComponent* InUpdatedComponent) const;
+	void RecalculateMoveSpace(const USceneComponent* InUpdatedComponent, bool bTargetDestinationOnSpline, bool bWithBlend) const;
 	bool ShouldTargetDestinationBeOnSpline() const;
 	bool IsWithBlend() const;
 	
@@ -344,10 +339,10 @@ private:
 	*/
 	mutable FSplineMovementMoveSpace MoveSpace;
 
-	void ResetSplineMoveSpaceAndParamsFromWorldSpace(ESplineMovementSimulationResetFlags InFlags);
-	void FixLocationAlongSplineFromWorldSpace();
-	void FixRotationFromWorldSpace();
-	void FixLocationFromWorldSpace();
+	void ResetSplineMoveSpaceAndParamsFromWorldSpace(const USceneComponent* InUpdatedComponent, ESplineMovementSimulationResetFlags InFlags);
+	void FixLocationAlongSplineFromWorldSpace(const USceneComponent* InUpdatedComponent);
+	void FixRotationFromWorldSpace(const USceneComponent* InUpdatedComponent);
+	void FixLocationFromWorldSpace(const USceneComponent* InUpdatedComponent);
 
 	FTransform LocalToMoveSpace;
 	float LocationAlongSpline = 0.0F;
