@@ -207,7 +207,9 @@ public:
 
 	/**
 	* Transform from the move space to the world space.
-	* Always valid!
+	* Must be called only when the move space can be calculated in the current state (we have spline or updated component)!
+	* @warning: may fail (with error message) if unable to calculate move space in the current state!
+	* @warning: Slow: recalculates move space each time!
 	*/
 	const FTransform& GetMoveSpaceToWorld() const;
 
@@ -328,10 +330,11 @@ private:
 
 	FTransform GetMoveSpaceToWorld_ForFreeMovement(const USceneComponent* InUpdatedComponent) const;
 
-	void RecalculateMoveSpace(const USceneComponent* InUpdatedComponent) const;
-	void RecalculateMoveSpace(const USceneComponent* InUpdatedComponent, bool bTargetDestinationOnSpline, bool bWithBlend) const;
-	bool ShouldTargetDestinationBeOnSpline() const;
-	bool IsWithBlend() const;
+	bool CanCalculateMoveSpace(bool bInMoveOnOrToSpline) const;
+	void RecalculateMoveSpace() const;
+	void RecalculateMoveSpace(bool bInMoveOnOrToSpline, bool bInBlendToSpline) const;
+	bool ShouldMoveFromOrToSpline() const;
+	bool ShouldBlendToSplineWhenMoving() const;
 	
 	/**
 	* Movement space

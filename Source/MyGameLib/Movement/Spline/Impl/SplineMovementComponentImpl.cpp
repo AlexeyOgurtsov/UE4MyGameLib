@@ -149,12 +149,12 @@ void USplineMovementComponentImpl::FinalizeTick()
 
 void USplineMovementComponentImpl::MoveTick(float const DeltaTime)
 {
-	bool const bTargetDestinationOnSpline = ShouldTargetDestinationBeOnSpline();
+	bool const bTargetDestinationOnSpline = ShouldMoveFromOrToSpline();
 	// All initializer values here are to be valid for the detached state!
 	// Is arbitrary movement control is allowed in this state
 	bool bAllowMoveControl = true;
 	bool bSweep = true;
-	bool const bWithBlend = IsWithBlend();
+	bool const bWithBlend = ShouldBlendToSplineWhenMoving();
 	bool bDetachOnBlockingHit = false;
 	switch(AttachState.State)
 	{
@@ -179,7 +179,7 @@ void USplineMovementComponentImpl::MoveTick(float const DeltaTime)
 		checkNoEntry();
 	}
 
-	RecalculateMoveSpace(GetUpdatedComponent(), bTargetDestinationOnSpline, bWithBlend);
+	RecalculateMoveSpace(bTargetDestinationOnSpline, bWithBlend);
 
 	FVector const MoveSpaceInputVector = MoveSpace.Transform.InverseTransformVectorNoScale(InputVector);	
 	FVector const MoveSpaceControlAcceleration = CalculateAccelerationFromInputVector(MoveSpaceInputVector, Phys.MoveSpaceVelocity);
@@ -274,7 +274,7 @@ void USplineMovementComponentImpl::MoveTick(float const DeltaTime)
 	}
 }
 
-bool USplineMovementComponentImpl::IsWithBlend() const
+bool USplineMovementComponentImpl::ShouldBlendToSplineWhenMoving() const
 {
 	switch(AttachState.State)
 	{
@@ -297,7 +297,7 @@ bool USplineMovementComponentImpl::IsWithBlend() const
 
 }
 
-bool USplineMovementComponentImpl::ShouldTargetDestinationBeOnSpline() const
+bool USplineMovementComponentImpl::ShouldMoveFromOrToSpline() const
 {
 	switch(AttachState.State)
 	{
@@ -317,20 +317,47 @@ bool USplineMovementComponentImpl::ShouldTargetDestinationBeOnSpline() const
 	return false;
 }
 
-void USplineMovementComponentImpl::RecalculateMoveSpace(const USceneComponent* const InUpdatedComponent) const
+/**
+* @returns true if able to calculate move space of the given type
+*/
+bool USplineMovementComponentImpl::CanCalculateMoveSpace(bool const bInMoveOnOrToSpline) const
 {
-	RecalculateMoveSpace(InUpdatedComponent, ShouldTargetDestinationBeOnSpline(), IsWithBlend());
+	if(bInMoveOnOrToSpline)
+	{
+		return GetSplineComponent() != nullptr;
+	}
+	else
+	{
+		return GetUpdatedComponent() != nullptr;
+	}
+	return true;
 }
 
-void USplineMovementComponentImpl::RecalculateMoveSpace(const USceneComponent* const InUpdatedComponent, bool const bInTargetDestinationOnSpline, bool const bInWithBlend) const
+void USplineMovementComponentImpl::RecalculateMoveSpace() const
 {
+	RecalculateMoveSpace(ShouldMoveFromOrToSpline(), ShouldBlendToSplineWhenMoving());
+}
+
+/**
+* Recalculates the move space of the given type, provided by the arguments.
+* @see CanCalculateMoveSpace
+* @param bInMoveOnOrToSpline Must be true if we're currently moving on spline or we're blending to spline
+* @param bInBlendToSpline True if the target move space is to be calculated by blending the destination on the spline and the before-attached move-space.
+*/
+void USplineMovementComponentImpl::RecalculateMoveSpace(bool const bInMoveOnOrToSpline, bool const bInBlendToSpline) const
+{
+	checkf( ! bInBlendToSpline || bInMoveOnOrToSpline, TEXT("When calling \"%s\" blending to spline must be enabled only if moving on or to spline is enabled!"), TEXT(__FUNCTION__));
+	checkf( ! bInBlendToSpline || IsAttachingMovementToSplineNow(), TEXT("Calling \"%s\" with blending to spline enabled valid only in the attaching state!"), TEXT(__FUNCTION__));
+
+	checkf( CanCalculateMoveSpace(bInMoveOnOrToSpline), TEXT("Wrong to call \"%s\" in this state - unable to calculate the move space"), TEXT(__FUNCTION__));
+
 	MoveSpace.MoveSpaceDetachedToTargetTranslation = FVector::ZeroVector;
 	MoveSpace.BlendVelocity = FVector::ZeroVector;
 
-	if(bInTargetDestinationOnSpline)
+	if(bInMoveOnOrToSpline)
 	{
 		FTransform const TargetSplineToWorld = GetSplineToWorldAt(LocationAlongSpline);
-		if(bInWithBlend)
+		if(bInBlendToSpline)
 		{
 			float const AttachBlendTime = GetConfig().AttachRules.AttachBlendTime;
 			FTransform const MoveSpaceToWorld_BeforeAttachingStarted = AttachState.MoveSpaceToWorld_BeforeAttaching;
@@ -348,7 +375,7 @@ void USplineMovementComponentImpl::RecalculateMoveSpace(const USceneComponent* c
 	}
 	else
 	{
-		MoveSpace.Transform = GetMoveSpaceToWorld_ForFreeMovement(InUpdatedComponent);
+		MoveSpace.Transform = GetMoveSpaceToWorld_ForFreeMovement(GetUpdatedComponent());
 	}
 }
 
@@ -452,11 +479,17 @@ void USplineMovementComponentImpl::SetOnlyMoveSpaceVelocity(const FVector& InVel
 void USplineMovementComponentImpl::SetVelocityInMoveSpace(const FVector& InVelocity, bool const bTrackingAccountedInVelocity)
 {
 	SetOnlyMoveSpaceVelocity(InVelocity, bTrackingAccountedInVelocity);
-	if(const USceneComponent* UpdatedComponent = GetUpdatedComponent())
+	bool const bOnSpline = ShouldMoveFromOrToSpline();
+	bool const bWithBlend = ShouldBlendToSplineWhenMoving();
+	if(CanCalculateMoveSpace(bOnSpline))
 	{
-		RecalculateMoveSpace(UpdatedComponent);
+		RecalculateMoveSpace(bOnSpline, bWithBlend);
 		MovementComponent->Velocity = MoveSpace.Transform.TransformVectorNoScale(InVelocity);
 		MovementComponent->UpdateComponentVelocity();
+	}
+	else
+	{
+		M_LOG_WARN(TEXT("Calling \"%s\" in the state where move space cannot be recalculated - world-space velocity will not be updated!"), TEXT(__FUNCTION__));
 	}
 }
 
@@ -478,10 +511,16 @@ FTransform USplineMovementComponentImpl::GetMoveSpaceToWorld_ForFreeMovement(con
 
 const FTransform& USplineMovementComponentImpl::GetMoveSpaceToWorld() const
 {
-	if(const USceneComponent* UpdatedComponent = GetUpdatedComponent())
+	bool const bOnSpline = ShouldMoveFromOrToSpline();
+	bool const bWithBlend = ShouldBlendToSplineWhenMoving();
+	bool const bCanCalculate = CanCalculateMoveSpace(bOnSpline);
+	if ( ! bCanCalculate )
 	{
-		RecalculateMoveSpace(UpdatedComponent);
+		M_LOG_ERROR(TEXT("Unable to calculate the move space in the current state!"));
+		return FTransform::Identity;
 	}
+
+	RecalculateMoveSpace(bOnSpline, bWithBlend);
 	return MoveSpace.Transform;
 }
 
