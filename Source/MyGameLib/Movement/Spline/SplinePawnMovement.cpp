@@ -13,6 +13,7 @@
 
 USplinePawnMovement::USplinePawnMovement()
 {
+	// NOTE default property values are also set inside the Impl
 	Impl = USplineMovementComponentImpl::CreateSplineMovementComponentImpl(TEXT("SplinePawnMovementComponentImpl"), this, &Config);
 }
 
@@ -66,6 +67,17 @@ void USplinePawnMovement::TickComponent(float const DeltaTime, enum ELevelTick c
 //~ End ActorComponent Interface 
 
 // ~UMovementComponent Begin
+float USplinePawnMovement::GetGravityZ() const
+{
+	float const GravityZ = Super::GetGravityZ();
+	return Impl->GetComponentGravityZ(GravityZ);
+}
+
+float USplinePawnMovement::GetMaxSpeed() const 
+{
+	return Impl->GetMaxSpeed();
+}
+
 void USplinePawnMovement::StopMovementImmediately()
 {
 	Super::StopMovementImmediately();

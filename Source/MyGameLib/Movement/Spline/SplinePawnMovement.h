@@ -31,6 +31,8 @@ public:
 	// ~AActor End
 	
 	// ~UMovementComponent Begin
+	virtual float GetGravityZ() const override;
+	virtual float GetMaxSpeed() const override;
 	virtual void StopMovementImmediately() override;
 	virtual void OnTeleported() override;
 	// ~UMovementComponent End

@@ -18,34 +18,19 @@
 * 1.0. Call the events (+DONE)
 * 1.1. Make MovementCompoent's events bindable from Blueprint
 *
-* @TODO
-* 1. Attaching to spline dynamically
-* 1.2. Calculate initial transform for KeepWorld attachment mode
-*
-* @TODO: Detaching from spline dynamically:
-* 1. After the detachment we must always keep current transform in world space (ever when detaching from attaching with blending state!).
-*
 * @TODO Free Mode
 * 1. Rotation is to be rotated by the LocalToMoveSpace's rotation relative to the movement axis (+CODED)
-*
-* @TODO Handling Tracking Speed
-* 1. Allow to disable it (necessary for stop immediately)
-* 2. Provide tracking acceleration and deceleration
 *
 * @TODO Check world bounds
 *
 * @TODO Check max speed
-*
-* @TODO Receiving a blocking hit: we should alter our spline space velocity according to the updated velocity
-*
-* @TODO Slide along surface
-*
-* @TODO Gravity:
-* 1. To be considered when free movement is used and the physics mode is not flying.
 */
 
 USplineMovementComponentImpl::USplineMovementComponentImpl()
 {
+	// Now we always need tick to update the spline provider.
+	MovementComponent->bAutoUpdateTickRegistration = false;
+
 	AttachState.SetDetached();
 }
 
@@ -271,6 +256,22 @@ void USplineMovementComponentImpl::MoveTick(float const DeltaTime)
 			}
 		}
 	}
+}
+
+float USplineMovementComponentImpl::GetComponentGravityZ(float InGravityZ) const
+{
+	if(IsFreeMovement())
+	{
+		return InGravityZ;
+	}
+
+	return 0.0F;
+}
+
+float USplineMovementComponentImpl::GetMaxSpeed() const
+{
+	// @TODO
+	return 0.F;
 }
 
 bool USplineMovementComponentImpl::ShouldBlendToSplineWhenMoving() const
@@ -685,7 +686,7 @@ void USplineMovementComponentImpl::UpdateSplineProvider()
 {
 	M_LOGFUNC();
 	bool bShouldRelink = false;
-	if(SplineProvider != GetConfig().SplineProvider.Get(false))
+	if(SplineProvider != GetConfig().SplineProvider)
 	{
 		M_LOG(TEXT("Spline provider is changed - we should relink to spline"));
 		bShouldRelink = true;
@@ -778,8 +779,8 @@ void USplineMovementComponentImpl::ReLinkToSpline()
 {
 	M_LOGFUNC();
 	checkf(IsFreeMovement(), TEXT("\"%s\" should be called only in the detached-from-spline state"), TEXT(__FUNCTION__));
-	SplineProvider = GetConfig().SplineProvider.Get(false);
-	if(SplineProvider == nullptr)
+	SplineProvider = GetConfig().SplineProvider;
+	if(SplineProvider.Get() == nullptr)
 	{
 		M_LOG(TEXT("Spline provider is NULL"))
 		SplineComponent = nullptr;
@@ -787,7 +788,7 @@ void USplineMovementComponentImpl::ReLinkToSpline()
 	else
 	{
 		M_LOG(TEXT("Spline provider is NON-null pointer"))
-		ULogUtilLib::LogKeyedNameClassSafeC(TEXT("Spline provider"), SplineProvider);
+		ULogUtilLib::LogKeyedNameClassSafeC(TEXT("Spline provider"), SplineProvider.Get());
 		SplineComponent = SplineProvider->FindComponentByClass<USplineComponent>();
 		ULogUtilLib::LogFloatC(TEXT("New spline component"), GetLocationAlongSpline());
 	}

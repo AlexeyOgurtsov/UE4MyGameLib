@@ -28,7 +28,10 @@ struct FSplineMovementTrackState
 {
 	GENERATED_BODY()
 
+	UPROPERTY()
 	float Speed = 0.0F;
+
+	UPROPERTY()
 	float TargetSpeed = 0.0F;
 };
 
@@ -44,8 +47,10 @@ struct FSplineMovementPhysState
 	*
 	* @warn: Does NOT account the tracking-along-spline component!
 	*/
+	UPROPERTY()
 	FVector MoveSpaceVelocity = FVector::ZeroVector;
 
+	UPROPERTY()
 	FSplineMovementTrackState Tracking;
 };
 
@@ -78,12 +83,16 @@ struct FSplineMovementAttachmentState
 {
 	GENERATED_BODY()
 
+	UPROPERTY()
 	ESplineMovementAttachState State = ESplineMovementAttachState::Detached;
+
+	UPROPERTY()
 	float AttachingTime = 0.0F;
 
 	/**
 	* Transform in world space in the last detached state.
 	*/
+	UPROPERTY()
 	FTransform MoveSpaceToWorld_BeforeAttaching;
 
 	void SetAttached();
@@ -304,6 +313,18 @@ public:
 	* To be called from the StopMovementImmediately of the Movement Component.
 	*/
 	void StopMovementImmediately();
+
+	/**
+	* To be called from the GetGravityZ() of the movement component.
+	* @returns: The real value of the gravity.
+	*/
+	float GetComponentGravityZ(float InGravityZ) const;
+
+	/**
+	* To be called from the GetMaxSpeed() of the movement component.
+	* @returns: the maximum magnitude of the movement component's velocity vector under normal conditions.
+	*/
+	float GetMaxSpeed() const;
 	// ~From Movement Component End
 	
 	// ~UObject Begin
@@ -314,7 +335,10 @@ private:
 	// ~Spline attachment Begin
 	void ReLinkToSpline();
 
-	AActor* SplineProvider = nullptr;
+	UPROPERTY()
+	TWeakObjectPtr<AActor> SplineProvider = nullptr;
+
+	UPROPERTY()
 	USplineComponent* SplineComponent = nullptr;
 
 	FBeforeMovementAttachedToSplineEvent BeforeMovementAttachedToSpline;
@@ -329,6 +353,7 @@ private:
 	bool GotoState_Attached(bool bInSignalBeforeEvent = true);
 	bool GotoState_Detached();
 
+	UPROPERTY()
 	FSplineMovementAttachmentState AttachState;
 
 	// ~Spline attachnment End
@@ -352,6 +377,7 @@ private:
 	* Movement space
 	* Always calculated on-demand (when some function needs the move space it calls the move space recalculation function by itself)
 	*/
+	UPROPERTY()
 	mutable FSplineMovementMoveSpace MoveSpace;
 
 	void ResetSplineMoveSpaceAndParamsFromWorldSpace(const USceneComponent* InUpdatedComponent, ESplineMovementSimulationResetFlags InFlags);
@@ -359,15 +385,21 @@ private:
 	void FixRotationFromWorldSpace(const USceneComponent* InUpdatedComponent);
 	void FixLocationFromWorldSpace(const USceneComponent* InUpdatedComponent);
 
+	UPROPERTY()
 	FTransform LocalToMoveSpace;
+
+	UPROPERTY()
 	float LocationAlongSpline = 0.0F;
 
 	void SetOnlyMoveSpaceVelocity_InWorldSpace(const FVector& InVelocity, bool bTrackingAccountedInVelocity = true);
 	void SetOnlyMoveSpaceVelocity(const FVector& InVelocity, bool bTrackingAccountedInVelocity = true);
 
+	UPROPERTY()
 	FSplineMovementPhysState Phys;
 
 	FVector CalculateAccelerationFromInputVector(const FVector& InInputVector, const FVector& InOldVelocity) const;
+
+	UPROPERTY()
 	FVector InputVector = FVector::ZeroVector;
 
 	// ~Environment Begin
@@ -375,6 +407,7 @@ private:
 	* Current pending input vector from the MovementComponent
 	*/
 	/** MovementComponent*/
+	UPROPERTY()
 	UMovementComponent* MovementComponent = nullptr;
 
 	/** Config*/
