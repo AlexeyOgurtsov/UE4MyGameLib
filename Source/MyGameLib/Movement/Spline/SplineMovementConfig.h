@@ -110,29 +110,60 @@ struct FSplineMovementPhysConfig
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FSplineMovementPhysTrackingConfig Tracking;
 
-	/** Forward acceleration */
+	FVector GetAccelerationVector() const
+	{
+		return FVector
+		{
+			ForwardAcceleration, 
+			StrafeAcceleration, 
+			LiftAcceleration 
+		};
+	}
+
+	FVector GetDecelerationVector() const
+	{
+		return FVector
+		{
+			ForwardDeceleration, 
+			StrafeDeceleration, 
+			LiftDeceleration 
+		};
+	}
+
+	FVector GetMaxSpeedVector() const
+	{
+		return FVector
+		{
+			MaxForwardSpeed, MaxLiftSpeed, MaxStrafeSpeed
+		};
+	}
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Meta=(ClampMin=0.0F, ClampMax=5000.0F))
 	float ForwardAcceleration = 10.0F;
 
-	/** Forward deceleration */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Meta=(ClampMin=0.0F, ClampMax=5000.0F))
 	float ForwardDeceleration = 20.0F;
 
-	/** Strafe acceleration */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Meta=(ClampMin=0.0F, ClampMax=5000.0F))
 	float StrafeAcceleration = 10.0F;
 
-	/** Strafe deceleration */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Meta=(ClampMin=0.0F, ClampMax=5000.0F))
 	float StrafeDeceleration = 20.0F;
 
-	/** Lift acceleration */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Meta=(ClampMin=0.0F, ClampMax=5000.0F))
 	float LiftAcceleration = 40.0F;
 
-	/** Strafe deceleration */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Meta=(ClampMin=0.0F, ClampMax=5000.0F))
 	float LiftDeceleration = 70.0F;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Meta=(ClampMin=0.0F, ClampMax=5000.0F))
+	float MaxForwardSpeed = 2000.0F;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Meta=(ClampMin=0.0F, ClampMax=5000.0F))
+	float MaxStrafeSpeed =  1000.0F;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Meta=(ClampMin=0.0F, ClampMax=5000.0F))
+	float MaxLiftSpeed = 800.0F;
 };
 
 /**

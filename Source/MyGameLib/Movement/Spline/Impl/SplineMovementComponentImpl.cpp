@@ -175,10 +175,8 @@ void USplineMovementComponentImpl::MoveTick(float const DeltaTime)
 
 	RecalculateMoveSpace(bMoveOnOrToSpline, bBlendMoveSpaceToSpline);
 
-	FVector const MoveSpaceInputVector = MoveSpace.Transform.InverseTransformVectorNoScale(InputVector);	
-	FVector const MoveSpaceControlAcceleration = CalculateAccelerationFromInputVector(MoveSpaceInputVector, Phys.MoveSpaceVelocity);
-	// Acceleration vector in the coordinate space we move and control now
-	FVector const MoveSpaceAcceleration = bAllowMoveControl ? MoveSpaceControlAcceleration : FVector::ZeroVector;
+	FVector const MoveSpaceInputVector = bAllowMoveControl ? MoveSpace.Transform.InverseTransformVectorNoScale(InputVector) : FVector::ZeroVector;	
+	FVector const MoveSpaceAcceleration = CalculateMoveSpaceAcceleration(MoveSpaceInputVector, Phys.MoveSpaceVelocity);
 	RecalculateTrackingSpeed(DeltaTime);
 
 	// MoveDelta in the Move space (@see ComputeMoveDelta help)
@@ -625,49 +623,55 @@ float USplineMovementComponentImpl::GetTargetTrackingSpeed() const
 }
 
 /**
-* Calculates acceleration based on the input vector value.
+* Calculates acceleration in the move space.
 *
-* @return Target Acceleration in the same coordinate space as the input vector
-* @param InInputVector Input vector in arbitrary coordinate space
-* @param InOldVelocity Input velocity in the same coordinate space as the input vector
+* @return Target Acceleration in the move space
+* @param InInputVector Input vector in the move space 
+* @param InOldVelocity Input velocity in the move space
 */
-FVector USplineMovementComponentImpl::CalculateAccelerationFromInputVector(const FVector& InInputVector, const FVector& InOldVelocity) const
+FVector USplineMovementComponentImpl::CalculateMoveSpaceAcceleration(const FVector& InInputVector, const FVector& InOldVelocity)
 {
-	// Deceleration values represented as a vector.
-	// Each values is negative.
-	// Each value's absolute is not greater then velocity's absolute in the corresponding local axis.
-	FVector const DecelerationVector = -InOldVelocity.GetAbs().ComponentMin
-	(
-		FVector
-		{ 
-			GetConfig().Phys.ForwardDeceleration, 
-			GetConfig().Phys.StrafeDeceleration, 
-			GetConfig().Phys.LiftDeceleration 
-		}
-	);
-	FVector const AccelerationVector = 
+	FVector const MaxSpeedVector = GetConfig().Phys.GetMaxSpeedVector();
+	FVector const AccelerationVector = GetConfig().Phys.GetAccelerationVector();
+	FVector const DecelerationVector = GetConfig().Phys.GetDecelerationVector();
+	
+	FVector const AccelSignVector = (InOldVelocity * InInputVector).GetSignVector();
+
+	// Acceleration component to be applied to the axis in DIRECTION of the INPUT VECTOR's component SIGN!
+	auto const GetAccelerationComponent = [&, MaxSpeedVector, DecelerationVector, AccelerationVector, AccelSignVector, InInputVector, InOldVelocity](EAxis::Type InAxis)
 	{
-		GetConfig().Phys.ForwardAcceleration, 
-		GetConfig().Phys.StrafeAcceleration, 
-		GetConfig().Phys.LiftAcceleration 
-	};
-	auto const GetAccelerationComponent = [&, DecelerationVector, AccelerationVector, InInputVector](EAxis::Type InAxis)
-	{
-		if(FMath::IsNearlyZero(InInputVector.GetComponentForAxis(InAxis)))
+		float const Vel = InOldVelocity.GetComponentForAxis(InAxis);
+		float const Speed = FMath::Abs(Vel);
+		float const AccelSign = AccelSignVector.GetComponentForAxis(InAxis);
+
+		float const DeltaToMaxSpeed = MaxSpeedVector.GetComponentForAxis(InAxis) - Speed;
+		bool const bControlAccel = ( ! FMath::IsNearlyZero(AccelSign) ) && AccelSign > 0;
+		bool const bMaxSpeedExceeded = DeltaToMaxSpeed < 0.0F;
+		if( ! bControlAccel || bMaxSpeedExceeded)
 		{
-			return DecelerationVector.GetComponentForAxis(InAxis);
+			// We should not decelerate more than to the point when maximal speed for component is gained if it's gained
+			// And cannot change sign of the velocity after the deceleration, so we decelerate up to the point,
+			// when the corresponding velocity component is zeroed
+			float const MaxDecelAbs = bMaxSpeedExceeded ? (-DeltaToMaxSpeed) : Speed;
+
+			return - FMath::Min(DecelerationVector.GetComponentForAxis(InAxis), MaxDecelAbs);
 		}
 		else
 		{
-			return AccelerationVector.GetComponentForAxis(InAxis);
+			if( bControlAccel )
+			{
+				return FMath::Min(AccelerationVector.GetComponentForAxis(InAxis), DeltaToMaxSpeed);
+			}
 		}
+		return 0.0F;
 	};
-	return InOldVelocity.GetSignVector() * InInputVector.GetSignVector() * FVector
+	return AccelSignVector * FVector
 	{
-		GetAccelerationComponent(EAxis::Type::X), 
-		GetAccelerationComponent(EAxis::Type::Y), 
-		GetAccelerationComponent(EAxis::Type::Z) 
+		GetAccelerationComponent(EAxis::Type::X),
+		GetAccelerationComponent(EAxis::Type::Y),
+		GetAccelerationComponent(EAxis::Type::Z)
 	};
+
 }
 
 void USplineMovementComponentImpl::SetPendingInputVector(const FVector& InInputVector)

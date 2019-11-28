@@ -397,7 +397,7 @@ private:
 	UPROPERTY()
 	FSplineMovementPhysState Phys;
 
-	FVector CalculateAccelerationFromInputVector(const FVector& InInputVector, const FVector& InOldVelocity) const;
+	FVector CalculateMoveSpaceAcceleration(const FVector& InInputVector, const FVector& InOldVelocity);
 
 	UPROPERTY()
 	FVector InputVector = FVector::ZeroVector;
