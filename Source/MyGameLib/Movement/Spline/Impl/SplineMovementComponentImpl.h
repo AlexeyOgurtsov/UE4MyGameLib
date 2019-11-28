@@ -59,15 +59,21 @@ struct FSplineMovementMoveSpace
 {
 	GENERATED_BODY()
 
-	// Transform from space, in which the movement is calculated now to the world space
+	/**
+	* Transform from space, in which the movement is calculated now to the world space
+	*/
 	UPROPERTY()
 	FTransform Transform;
 
-	// Translation of the movement space from the last detached state to target
+	/**
+	* Translation of the movement space from the last detached state to target
+	*/
 	UPROPERTY()
 	FVector MoveSpaceDetachedToTargetTranslation = FVector::ZeroVector;
 
-	// Velocity along the blend direction in the world space
+	/**
+	* Velocity along the blend direction in the world space
+	*/
 	UPROPERTY()
 	FVector BlendVelocity = FVector::ZeroVector;
 
@@ -322,7 +328,14 @@ public:
 
 	/**
 	* To be called from the GetMaxSpeed() of the movement component.
-	* @returns: the maximum magnitude of the movement component's velocity vector under normal conditions.
+	*
+	* @returns
+	* The approximate maximum magnitude of the movement component's velocity vector under normal conditions.
+	* Tracking speed is accounted.
+	* Attaching blending speed is accounted.
+	*
+	* @warn
+	* Changes when target tracking speed or state change.
 	*/
 	float GetMaxSpeed() const;
 	// ~From Movement Component End

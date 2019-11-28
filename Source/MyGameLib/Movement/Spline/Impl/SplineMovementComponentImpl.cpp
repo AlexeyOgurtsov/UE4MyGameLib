@@ -22,8 +22,6 @@
 * 1. Rotation is to be rotated by the LocalToMoveSpace's rotation relative to the movement axis (+CODED)
 *
 * @TODO Check world bounds
-*
-* @TODO Check max speed
 */
 
 USplineMovementComponentImpl::USplineMovementComponentImpl()
@@ -256,7 +254,7 @@ void USplineMovementComponentImpl::MoveTick(float const DeltaTime)
 	}
 }
 
-float USplineMovementComponentImpl::GetComponentGravityZ(float InGravityZ) const
+float USplineMovementComponentImpl::GetComponentGravityZ(float const InGravityZ) const
 {
 	if(IsFreeMovement())
 	{
@@ -268,8 +266,17 @@ float USplineMovementComponentImpl::GetComponentGravityZ(float InGravityZ) const
 
 float USplineMovementComponentImpl::GetMaxSpeed() const
 {
-	// @TODO
-	return 0.F;
+	float const MaxSpeed = FVector 
+	{
+	 	GetConfig().Phys.MaxForwardSpeed + GetTargetTrackingSpeed(),
+		GetConfig().Phys.MaxStrafeSpeed,
+		GetConfig().Phys.MaxLiftSpeed
+	}.Size();
+	if(IsAttachingMovementToSplineNow())
+	{
+		return MaxSpeed + MoveSpace.BlendVelocity.Size();
+	}
+	return MaxSpeed;
 }
 
 bool USplineMovementComponentImpl::ShouldBlendToSplineWhenMoving() const

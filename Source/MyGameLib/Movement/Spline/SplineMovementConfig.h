@@ -112,30 +112,17 @@ struct FSplineMovementPhysConfig
 
 	FVector GetAccelerationVector() const
 	{
-		return FVector
-		{
-			ForwardAcceleration, 
-			StrafeAcceleration, 
-			LiftAcceleration 
-		};
+		return FVector { ForwardAcceleration, StrafeAcceleration, LiftAcceleration };
 	}
 
 	FVector GetDecelerationVector() const
 	{
-		return FVector
-		{
-			ForwardDeceleration, 
-			StrafeDeceleration, 
-			LiftDeceleration 
-		};
+		return FVector { ForwardDeceleration, StrafeDeceleration, LiftDeceleration };
 	}
 
 	FVector GetMaxSpeedVector() const
 	{
-		return FVector
-		{
-			MaxForwardSpeed, MaxLiftSpeed, MaxStrafeSpeed
-		};
+		return FVector { MaxForwardSpeed, MaxStrafeSpeed, MaxLiftSpeed };
 	}
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Meta=(ClampMin=0.0F, ClampMax=5000.0F))
