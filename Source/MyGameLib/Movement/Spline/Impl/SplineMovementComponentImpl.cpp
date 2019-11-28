@@ -149,12 +149,21 @@ void USplineMovementComponentImpl::FinalizeTick()
 
 void USplineMovementComponentImpl::MoveTick(float const DeltaTime)
 {
-	bool const bTargetDestinationOnSpline = ShouldMoveFromOrToSpline();
+	if(AttachState.State == ESplineMovementAttachState::Attaching)
+	{
+		AttachState.AttachingTime += DeltaTime;
+		if(AttachState.AttachingTime >= GetConfig().AttachRules.AttachBlendTime)
+		{
+			GotoState_Attached();
+		}
+	}
+
+	bool const bMoveOnOrToSpline = ShouldMoveFromOrToSpline();
 	// All initializer values here are to be valid for the detached state!
 	// Is arbitrary movement control is allowed in this state
 	bool bAllowMoveControl = true;
 	bool bSweep = true;
-	bool const bWithBlend = ShouldBlendToSplineWhenMoving();
+	bool const bBlendMoveSpaceToSpline = ShouldBlendToSplineWhenMoving();
 	bool bDetachOnBlockingHit = false;
 	switch(AttachState.State)
 	{
@@ -179,7 +188,7 @@ void USplineMovementComponentImpl::MoveTick(float const DeltaTime)
 		checkNoEntry();
 	}
 
-	RecalculateMoveSpace(bTargetDestinationOnSpline, bWithBlend);
+	RecalculateMoveSpace(bMoveOnOrToSpline, bBlendMoveSpaceToSpline);
 
 	FVector const MoveSpaceInputVector = MoveSpace.Transform.InverseTransformVectorNoScale(InputVector);	
 	FVector const MoveSpaceControlAcceleration = CalculateAccelerationFromInputVector(MoveSpaceInputVector, Phys.MoveSpaceVelocity);
@@ -190,21 +199,21 @@ void USplineMovementComponentImpl::MoveTick(float const DeltaTime)
 	// MoveDelta in the Move space (@see ComputeMoveDelta help)
 	FVector const MoveDelta = UpdateMoveSpaceVelocity_AndReturnMoveDelta(DeltaTime, MoveSpaceAcceleration);
 
-	if(bTargetDestinationOnSpline)
+	if(bMoveOnOrToSpline)
 	{
 		LocalToMoveSpace.AddToTranslation(MoveDelta);
-		if( ! bWithBlend )
+		if( ! bBlendMoveSpaceToSpline )
 		{
 			LocationAlongSpline += LocalToMoveSpace.GetLocation().X;
 			FixLocationAlongSpline();
 		}
 		else
 		{
-			checkf(bWithBlend, TEXT("In \"%s\": We are on the branch where blending is enabled"), TEXT(__FUNCTION__));
+			checkf(bBlendMoveSpaceToSpline, TEXT("In \"%s\": We are on the branch where blending to spline is enabled"), TEXT(__FUNCTION__));
 			// Blend faster when moving forward
 			// @TODO
 		}
-		// Warning: Fixing local-to-move-space must be done after it's .X component is accounted, as it's zeroed here!
+		// Warning: Fixing local-to-move-space must be done after it's .X component is accounted, as it's zeroed when fixing!
 		FixLocalToMoveSpace();
 	}
 
@@ -212,7 +221,7 @@ void USplineMovementComponentImpl::MoveTick(float const DeltaTime)
 	FVector DeltaLocation; // Delta Location In World Space
 	FRotator NewRotation; // New Rotation in World Space
 	{
-		if(bTargetDestinationOnSpline)
+		if(bMoveOnOrToSpline)
 		{
 			// New transform of the updated component in world space
 			FTransform const TargetTransform = LocalToMoveSpace * MoveSpace.Transform;
@@ -221,7 +230,6 @@ void USplineMovementComponentImpl::MoveTick(float const DeltaTime)
 		}
 		else
 		{
-			checkf( ! bTargetDestinationOnSpline, TEXT("In \"%s\": We are on the branch now, that requires that the target destination is NOT on the spline!"), TEXT(__FUNCTION__));
 			DeltaLocation = MoveSpace.Transform.TransformVectorNoScale(MoveDelta);
 			NewRotation = MoveSpace.Transform.TransformRotation(LocalToMoveSpace.GetRotation()).Rotator();
 		}
@@ -261,15 +269,6 @@ void USplineMovementComponentImpl::MoveTick(float const DeltaTime)
 				       	ESplineMovementSimulationResetFlags::KeepWorldSpaceVelocity
 				);
 			}
-		}
-	}
-	
-	if(AttachState.State == ESplineMovementAttachState::Attaching)
-	{
-		AttachState.AttachingTime += DeltaTime;
-		if(AttachState.AttachingTime >= GetConfig().AttachRules.AttachBlendTime)
-		{
-			GotoState_Attached();
 		}
 	}
 }
@@ -386,6 +385,9 @@ void USplineMovementComponentImpl::RecalculateMoveSpace(bool const bInMoveOnOrTo
 */
 void USplineMovementComponentImpl::ResetSplineMoveSpaceAndParamsFromWorldSpace(const USceneComponent* const InUpdatedComponent, ESplineMovementSimulationResetFlags const InFlags)
 {
+	checkf(InUpdatedComponent, TEXT("When calling \"%s\" provided Update Component argument must be valid NON-null pointer"), TEXT(__FUNCTION__));
+	checkf(GetSplineComponent(), TEXT("When calling \"%s\" SplineComponent must be valid NON-null pointer"), TEXT(__FUNCTION__));
+
 	bool const bKeepWorldLocation = (InFlags & ESplineMovementSimulationResetFlags::KeepWorldSpaceLocation) != ESplineMovementSimulationResetFlags::None;
 	if(bKeepWorldLocation)
 	{
@@ -530,6 +532,7 @@ void USplineMovementComponentImpl::OnComponentTeleported()
 
 	if( IsMovementAttachedToSpline() )
 	{
+		// NOTE: Here the spline component must be always valid, because of the IsMovementAttachedToSpline requirement!
 		M_LOG(TEXT("Teleported - recalculating new spline transform"));
 		ResetSplineMoveSpaceAndParamsFromWorldSpace(GetUpdatedComponent(), ESplineMovementSimulationResetFlags::KeepWorldSpaceLocation | ESplineMovementSimulationResetFlags::KeepWorldSpaceRotation);
 	}
@@ -567,6 +570,7 @@ void USplineMovementComponentImpl::SetLocationAlongSpline(float const NewLocatio
 */
 FTransform USplineMovementComponentImpl::GetSplineToWorldAt(float const InLocationAlongSpline) const
 {
+	checkf(GetSplineComponent(), TEXT("When calling \"%s\" SplineComponent must be valid NON-null pointer"), TEXT(__FUNCTION__));
 	return GetSplineComponent()->GetTransformAtDistanceAlongSpline(InLocationAlongSpline, ESplineCoordinateSpace::Type::World);
 }
 
@@ -703,6 +707,29 @@ void USplineMovementComponentImpl::UpdateSplineProvider()
 
 		ReLinkToSpline();
 	}
+}
+
+bool USplineMovementComponentImpl::IsFreeMovement() const 
+{
+       	return GetAttachState() == ESplineMovementAttachState::Detached; 
+}
+bool USplineMovementComponentImpl::IsMovementAttachedToSpline() const 
+{
+       	bool const bAttached = (GetAttachState() == ESplineMovementAttachState::Attached); 
+	// @TODO: Is it possible that we're attached to spline, but the spline is NULL (not updated)
+	checkf( GetSplineComponent() || !bAttached, TEXT("In this state the spline component must always be valid NON-null pointer!"));
+	return bAttached;
+}
+bool USplineMovementComponentImpl::IsAttachingMovementToSplineNow() const 
+{
+       	bool const bAttaching = (GetAttachState() == ESplineMovementAttachState::Attaching); 
+	// @TODO: Is it possible that we're attaching to spline, but the spline is NULL (not updated)
+	checkf( GetSplineComponent() || !bAttaching, TEXT("In this state the spline component must always be valid NON-null pointer!"));
+	return bAttaching;
+}
+bool USplineMovementComponentImpl::IsMovementAttachedOrAttachingToSpline() const 
+{
+       	return IsMovementAttachedToSpline() || IsAttachingMovementToSplineNow(); 
 }
 
 bool USplineMovementComponentImpl::AttachToSpline()

@@ -147,12 +147,24 @@ public:
 	FMovementDetachedFromSplineEvent& OnMovementDetachedFromSpline() { return MovementDetachedFromSpline; }
 
 	/**
-	* Free movement is movement when we are detached from the spline.
+	* Free movement is movement state when we are detached from the spline.
 	*/
-	bool IsFreeMovement() const { return GetAttachState() == ESplineMovementAttachState::Detached; }
-	bool IsMovementAttachedToSpline() const { return GetAttachState() == ESplineMovementAttachState::Attached; }
-	bool IsAttachingMovementToSplineNow() const { return GetAttachState() == ESplineMovementAttachState::Attaching; }
-	bool IsMovementAttachedOrAttachingToSpline() const { return IsMovementAttachedToSpline() || IsAttachingMovementToSplineNow(); }
+	bool IsFreeMovement() const;
+
+	/**
+	* Returns whether we're in the attached-to-spline state now.
+	* Attached-to-spline is the state when we're moving in the space of the spline.
+	* @warn: When we're attaching, it's NOT the attached state yet!
+	* @warn: In the attached state the spline component is always valid NON-null pointer.
+	*/
+	bool IsMovementAttachedToSpline() const;
+
+	/**
+	* Returns whether we're in the attaching-to-spline state now.
+	* @warn: In the attaching state the spline component is always valid NON-null pointer.
+	*/
+	bool IsAttachingMovementToSplineNow() const;
+	bool IsMovementAttachedOrAttachingToSpline() const;
 
 	/**
 	* Time of attaching: always zero in detached or attached states.
