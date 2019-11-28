@@ -10,13 +10,10 @@
 #include "Engine/World.h"
 
 /**
-* Bugs @TODO:
-* 1. Check the MoveSpace calculation.
-*
 * @TODO Events:
 * 1. Attaching/Detaching/Attached states etc.
 * 1.0. Call the events (+DONE)
-* 1.1. Make MovementCompoent's events bindable from Blueprint
+* 1.1. Make MovementComponent's events bindable from Blueprint
 *
 * @TODO Free Mode
 * 1. Rotation is to be rotated by the LocalToMoveSpace's rotation relative to the movement axis (+CODED)
@@ -470,6 +467,7 @@ void USplineMovementComponentImpl::SetOnlyMoveSpaceVelocity_InWorldSpace(const F
 
 /*
 * Sets the move-space velocity optionally accounting tracking.
+* @warn: Does NOT clamp the move space velocity!
 * @warn: Does NOT update the world-space Velocity.
 *
 * @param InVelocity: velocity in the move space.
@@ -481,7 +479,6 @@ void USplineMovementComponentImpl::SetOnlyMoveSpaceVelocity(const FVector& InVel
 	{
 		Phys.MoveSpaceVelocity.X -= GetTrackingSpeed();
 	}
-	// @TODO: Should we limit according to max speed here?
 }
 
 void USplineMovementComponentImpl::SetVelocityInMoveSpace(const FVector& InVelocity, bool const bTrackingAccountedInVelocity)
@@ -536,19 +533,20 @@ void USplineMovementComponentImpl::OnComponentTeleported()
 {
 	M_LOGFUNC();
 
-	if( IsMovementAttachedToSpline() )
-	{
-		// NOTE: Here the spline component must be always valid, because of the IsMovementAttachedToSpline requirement!
-		M_LOG(TEXT("Teleported - recalculating new spline transform"));
-		ResetSplineMoveSpaceAndParamsFromWorldSpace(GetUpdatedComponent(), ESplineMovementSimulationResetFlags::KeepWorldSpaceLocation | ESplineMovementSimulationResetFlags::KeepWorldSpaceRotation);
-	}
-	else if ( IsAttachingMovementToSplineNow() )
+	if ( IsAttachingMovementToSplineNow() )
 	{
 		M_LOG(TEXT("Teleported - detaching from spline"));
 		GotoState_Detached();
 	}
 
-	// @TODO: ???
+	if( IsMovementAttachedToSpline() )
+	{
+		// NOTE: Here the spline component must be always valid, because of the IsMovementAttachedToSpline requirement!
+		M_LOG(TEXT("Teleported - recalculating new spline transform"));
+		ResetSplineMoveSpaceAndParamsFromWorldSpace(GetUpdatedComponent(), ESplineMovementSimulationResetFlags::KeepWorldSpaceLocation | ESplineMovementSimulationResetFlags::KeepWorldSpaceRotation);
+		MovementComponent->Velocity = MoveSpace.Transform.InverseTransformVectorNoScale(GetMoveSpaceVelocity());
+		MovementComponent->UpdateComponentVelocity();
+	}
 }
 
 void USplineMovementComponentImpl::StopMovementImmediately()
@@ -867,17 +865,6 @@ bool USplineMovementComponentImpl::GotoState_Attaching()
 	// Should we keep world location at least
 	bool bKeepWorldLocation = (GetConfig().AttachRules.AttachTransformMode == ESplineMovementAttachTransformMode::KeepWorld)
 		|| (GetConfig().AttachRules.AttachTransformMode == ESplineMovementAttachTransformMode::KeepWorldLocationOnly);
-
-	// @TODO: Implement keeping world location when attaching 
-	// (WARNG!!! NOT right here! There's a TODO placeholder below this block!!!)
-	if(bKeepWorldLocation)
-	{
-		{
-			M_TO_BE_IMPL(TEXT("Keeping World Location is NOT yet implemented - using KeepSplineTransform instead"));
-			pConfig->AttachRules.AttachTransformMode = ESplineMovementAttachTransformMode::KeepSplineTransform;
-			bKeepWorldLocation = false;
-		}
-	}
 
 	// Should we get both location and rotation components from the world transform?
 	bool const bKeepWorldLocationAndRotation = (GetConfig().AttachRules.AttachTransformMode == ESplineMovementAttachTransformMode::KeepWorld);
