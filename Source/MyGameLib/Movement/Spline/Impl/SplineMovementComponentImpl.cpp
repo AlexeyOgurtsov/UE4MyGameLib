@@ -10,7 +10,7 @@
 #include "Engine/World.h"
 
 /**
-* @TODO Events:
+* @TODO Events
 * 1. Attaching/Detaching/Attached states etc.
 * 1.0. Call the events (+DONE)
 * 1.1. Make MovementComponent's events bindable from Blueprint (+CODED)
@@ -18,7 +18,11 @@
 * @TODO Free Mode
 * 1. Rotation is to be rotated by the LocalToMoveSpace's rotation relative to the movement axis (+CODED)
 *
-* @TODO Check world bounds
+* @TODO MoveSpace
+* 1. Make it as a cache and to be recalculateable automatically
+* 
+* @TODO Add movement input
+* 1. See code in the SplinePawnMovement - what's wrong with it?
 */
 
 USplineMovementComponentImpl::USplineMovementComponentImpl()
@@ -126,6 +130,7 @@ bool USplineMovementComponentImpl::TickBeforeSuper_ReturnShouldSkipUpdate(float 
 void USplineMovementComponentImpl::FinalizeTick()
 {
 	InputVector = FVector::ZeroVector;
+	MoveSpaceInputVector = FVector::ZeroVector;
 	MovementComponent->UpdateComponentVelocity();
 }
 
@@ -172,7 +177,6 @@ void USplineMovementComponentImpl::MoveTick(float const DeltaTime)
 
 	RecalculateMoveSpace(bMoveOnOrToSpline, bBlendMoveSpaceToSpline);
 
-	FVector const MoveSpaceInputVector = bAllowMoveControl ? MoveSpace.Transform.InverseTransformVectorNoScale(InputVector) : FVector::ZeroVector;	
 	FVector const MoveSpaceAcceleration = CalculateMoveSpaceAcceleration(MoveSpaceInputVector, Phys.MoveSpaceVelocity);
 	RecalculateTrackingSpeed(DeltaTime);
 
@@ -683,7 +687,41 @@ FVector USplineMovementComponentImpl::CalculateMoveSpaceAcceleration(const FVect
 
 void USplineMovementComponentImpl::SetPendingInputVector(const FVector& InInputVector)
 {
-	InputVector = InInputVector.GetClampedToMaxSize(1.F);
+	bool const bMoveOnOrToSpline = ShouldMoveFromOrToSpline();
+	if(CanCalculateMoveSpace(bMoveOnOrToSpline))
+	{
+		RecalculateMoveSpace();
+	}
+	else
+	{
+		M_LOG_ERROR(TEXT("Skipping setting input vector - unable to calculate the move-space in the current state"));
+		return;
+	}
+	InputVector = InInputVector;
+	MoveSpaceInputVector = MoveSpace.Transform.InverseTransformVectorNoScale(InInputVector);
+}
+
+FVector USplineMovementComponentImpl::AddMoveSpaceMovementInput(const FVector& InInputVector)
+{	
+	bool const bMoveOnOrToSpline = ShouldMoveFromOrToSpline();
+	if(CanCalculateMoveSpace(bMoveOnOrToSpline))
+	{
+		RecalculateMoveSpace();
+	}
+	else
+	{
+		M_LOG_ERROR(TEXT("Skipping setting input vector - unable to calculate the move-space in the current state"));
+		return FVector::ZeroVector;
+	}
+	MoveSpaceInputVector += InInputVector;
+	FVector const InputVectorInWorldSpace = MoveSpace.Transform.TransformVectorNoScale(InInputVector);
+	InputVector += InputVectorInWorldSpace;
+	return InputVectorInWorldSpace;
+}
+
+void USplineMovementComponentImpl::SetOnlyWorldSpacePendingInputVector(const FVector& InInputVector)
+{
+	InputVector = InInputVector;
 }
 
 void USplineMovementComponentImpl::UpdateFromConfig()

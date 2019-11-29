@@ -54,7 +54,8 @@ void USplinePawnMovement::TickComponent(float const DeltaTime, enum ELevelTick c
 	{
 		if(Controller->IsLocalPlayerController() || ! Controller->IsFollowingAPath())
 		{
-			Impl->SetPendingInputVector(GetPendingInputVector());
+			// @TODO: Check: we already must set the input vector when calling the AddMovementInput!
+			//Impl->SetPendingInputVector(GetPendingInputVector());
 		}
 	}
 
@@ -90,6 +91,26 @@ void USplinePawnMovement::OnTeleported()
 	Impl->OnComponentTeleported();
 }
 // ~UMovementComponent End
+
+// ~UPawnMovementComponent Begin
+void USplinePawnMovement::AddInputVector(FVector const WorldVector, bool const bForce)
+{
+	Super::AddInputVector(WorldVector, bForce);
+	Impl->SetPendingInputVector(GetPendingInputVector());
+}
+
+void USplinePawnMovement::AddMoveSpaceMovementInput(FVector const MoveSpaceVector, bool const bForce)
+{
+	if( ! IsMoveInputIgnored() || bForce )
+	{
+		FVector const WorldSpaceVector = Impl->AddMoveSpaceMovementInput(MoveSpaceVector);
+		// Warning! We must call the UPawnMovementComponent::AddInputVector (i.e. Super call),
+		// because the overloaded version would also calculate the move-space vector which is already calculated
+		Super::AddInputVector(WorldSpaceVector, bForce);
+		Impl->SetOnlyWorldSpacePendingInputVector(GetPendingInputVector());
+	}
+}
+// ~UPawnMovementComponent End
 
 // ~ UObject Begin
 #if WITH_EDITOR

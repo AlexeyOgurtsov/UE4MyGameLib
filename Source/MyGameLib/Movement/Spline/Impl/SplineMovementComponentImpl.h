@@ -147,7 +147,6 @@ public:
 	bool IsActive() const;
 	// ~Environment End
 
-	/** GetMovementComponent*/
 	// ~Spline Begin
 	/** GetSpline*/
 	USplineComponent* GetSplineComponent() const { return SplineComponent; }
@@ -262,15 +261,19 @@ public:
 	void SetLocationAlongSpline(float NewLocationAlongSpline);
 	// ~Spline End
 	
-	// ~From Movement Component Begin
-	// (To be delegated from the owning movement component)
+	// ~Implementation-only movement component functions Begin
+	// To be used from the UMovementComponent-derived implementation class, but NOT to be exposed for public use!
 	/**
 	* Must be called from the Component's BeginPlay()
+	*
+	* @warn   For implementation only (should not be exposed as a part of the movement component's interface)!
 	*/
 	void MyBeginPlay();
 
 	/**
 	* To be called when the PostInitProperties of the owning MovementComponent is called.
+	*
+	* @warn   For implementation only (should not be exposed as a part of the movement component's interface)!
 	*/
 	void MovementComponentPostInitProperties();
 
@@ -278,30 +281,58 @@ public:
 	* Typically to be called right before the Super call.
 	* Always must be called before the MoveTick.
 	* Returns true: if tick should be skipped, false, if should be done.
+	*
+	* @warn   For implementation only (should not be exposed as a part of the movement component's interface)!
 	*/
 	bool TickBeforeSuper_ReturnShouldSkipUpdate(float DeltaTime);
 
 	/**
 	* Performs all actions that are to be performed at the end of the tick.
 	* Zeroes pending input vector.
+	*
+	* @warn   For implementation only (should not be exposed as a part of the movement component's interface)!
 	*/
 	void FinalizeTick();
 
 	/**
 	* Calculates all physics parameters.
 	* And moves the updated component.
+	*
+	* @warn   For implementation only (should not be exposed as a part of the movement component's interface)!
 	*/
 	void MoveTick(float DeltaTime);
 
 	/**
 	* Set input vector at this time.
 	* Typically called from TickComponent function.
+	* Does nothing when the current move space cannot be calculated now.
 	*
-	* @param InInputVector: Input vector in world space
+	* @param InInputVector Input vector in world space
 	* 	Magnitue is always clamped to range 0.0F...1.0F
 	* 	for UPawnMovementComponent: GetPendingInputVector() is typically passed.
+	*
+	* @warn   For implementation only (should not be exposed as a part of the movement component's interface)!
+	* @warn  Prefer SetMoveSpacePendingInputVector when movement in the move space is needed.
+	* @see  SetMoveSpacePendingInputVector  
 	*/
 	void SetPendingInputVector(const FVector& InInputVector);
+	
+	/**
+	* Sets only the world-space input vector without setting the move-space.
+	* @warn   For implementation only (should not be exposed as a part of the movement component's interface)!
+	*/
+	void SetOnlyWorldSpacePendingInputVector(const FVector& InInputVector);
+	// ~Implementation-only movement component functions End
+
+	// ~UMovementComponent Begin 
+	/**
+	* Adds pending input vector in the move space.
+	* Does nothing when the current move space cannot be calculated now.
+	*
+	* @param  InInputVector  Input vector in move space.
+	* @returns   The given input vector transformed to the world space.
+	*/
+	FVector AddMoveSpaceMovementInput(const FVector& InInputVector);
 
 	/**
 	* To be called from the OnTeleported of the Movement Component.
@@ -315,7 +346,7 @@ public:
 
 	/**
 	* To be called from the GetGravityZ() of the movement component.
-	* @returns: The real value of the gravity.
+	* @returns  The real value of the gravity.
 	*/
 	float GetComponentGravityZ(float InGravityZ) const;
 
@@ -327,11 +358,10 @@ public:
 	* Tracking speed is accounted.
 	* Attaching blending speed is accounted.
 	*
-	* @warn
-	* Changes when target tracking speed or state change.
+	* @warn   Changes when target tracking speed or state change.
 	*/
 	float GetMaxSpeed() const;
-	// ~From Movement Component End
+	// ~UMovementComponent End
 	
 	// ~UObject Begin
 	virtual UWorld* GetWorld() const override;
@@ -399,6 +429,9 @@ private:
 
 	UPROPERTY()
 	FVector InputVector = FVector::ZeroVector;
+
+	UPROPERTY()
+	FVector MoveSpaceInputVector = FVector::ZeroVector;
 
 	// ~Environment Begin
 	/**

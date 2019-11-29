@@ -37,6 +37,11 @@ public:
 	virtual void OnTeleported() override;
 	// ~UMovementComponent End
 	
+	// ~UPawnMovementComponent Begin
+	virtual void AddInputVector(FVector WorldVector, bool bForce = true) override;
+	void AddMoveSpaceMovementInput(FVector MoveSpaceVector, bool bForce = true);
+	// ~UPawnMovementComponent End
+	
 	/** GetConfig*/
 	const FSplineMovementConfig& GetConfig() const { Config; }
 	
