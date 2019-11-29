@@ -108,6 +108,13 @@ struct FSplineMovementAttachmentState
 
 /**
 * Implementation of spline movement common both for Actor and Pawn spline movement components.
+*
+* Movement is simulated in the move space.
+* Move space is dependent on the state:
+* In attached state - the move space is moving along the spline;
+* In detached state (aka free move state) the move space is always linked with the updated component's local space.
+* In attaching state - we're blending the move space between the last move space in the detached state
+* and the given location on the spline;
 */
 UCLASS()
 class USplineMovementComponentImpl : public UObject
