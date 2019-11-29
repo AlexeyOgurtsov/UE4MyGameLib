@@ -14,7 +14,7 @@
 USplinePawnMovement::USplinePawnMovement()
 {
 	// NOTE default property values are also set inside the Impl
-	Impl = USplineMovementComponentImpl::CreateSplineMovementComponentImpl(TEXT("SplinePawnMovementComponentImpl"), this, &Config);
+	Impl = USplineMovementComponentImpl::CreateSplineMovementComponentImpl(TEXT("SplinePawnMovementComponentImpl"), this, &Config, &Delegates);
 }
 
 void USplinePawnMovement::PostInitProperties()
@@ -116,36 +116,6 @@ USplineComponent* USplinePawnMovement::GetSplineComponent() const
 ESplineMovementAttachState USplinePawnMovement::GetAttachState() const
 {
 	return Impl->GetAttachState();
-}
-
-FBeforeMovementAttachedToSplineEvent& USplinePawnMovement::OnBeforeMovementAttachedToSpline()
-{
-	return Impl->OnBeforeMovementAttachedToSpline();
-}
-
-FBeforeMovementBeginAttachingToSplineEvent& USplinePawnMovement::OnBeforeMovementBeginAttachingToSpline()
-{
-	return Impl->OnBeforeMovementBeginAttachingToSpline();
-}
-
-FBeforeMovementDetachedFromSplineEvent& USplinePawnMovement::OnBeforeMovementDetachedFromSpline()
-{
-	return Impl->OnBeforeMovementDetachedFromSpline();
-}
-
-FMovementAttachedToSplineEvent& USplinePawnMovement::OnMovementAttachedToSpline()
-{
-	return Impl->OnMovementAttachedToSpline();
-}
-
-FMovementBeginAttachingToSplineEvent& USplinePawnMovement::OnMovementBeginAttachingToSpline()
-{
-	return Impl->OnMovementBeginAttachingToSpline();
-}
-
-FMovementDetachedFromSplineEvent& USplinePawnMovement::OnMovementDetachedFromSpline()
-{
-	return Impl->OnMovementDetachedFromSpline();
 }
 
 bool USplinePawnMovement::IsFreeMovement() const

@@ -117,7 +117,7 @@ class USplineMovementComponentImpl : public UObject
 public:
 	USplineMovementComponentImpl();
 
-	static USplineMovementComponentImpl* CreateSplineMovementComponentImpl(FName InObjectName, UMovementComponent* InMovementComponent, FSplineMovementConfig* pInConfig);
+	static USplineMovementComponentImpl* CreateSplineMovementComponentImpl(FName InObjectName, UMovementComponent* InMovementComponent, FSplineMovementConfig* pInConfig, FSplineMovementDelegates* pInDelegates);
 
 	// ~Config Begin
 	/** GetConfig*/
@@ -153,13 +153,6 @@ public:
 	USplineComponent* GetSplineComponent() const { return SplineComponent; }
 
 	ESplineMovementAttachState GetAttachState() const { return AttachState.State; }
-
-	FBeforeMovementAttachedToSplineEvent& OnBeforeMovementAttachedToSpline() { return BeforeMovementAttachedToSpline; }
-	FBeforeMovementBeginAttachingToSplineEvent& OnBeforeMovementBeginAttachingToSpline() { return BeforeMovementBeginAttachingToSpline; }
-	FBeforeMovementDetachedFromSplineEvent& OnBeforeMovementDetachedFromSpline() { return BeforeMovementDetachedFromSpline; }
-	FMovementAttachedToSplineEvent& OnMovementAttachedToSpline() { return MovementAttachedToSpline; }
-	FMovementBeginAttachingToSplineEvent& OnMovementBeginAttachingToSpline() { return MovementBeginAttachingToSpline; }
-	FMovementDetachedFromSplineEvent& OnMovementDetachedFromSpline() { return MovementDetachedFromSpline; }
 
 	/**
 	* Free movement is movement state when we are detached from the spline.
@@ -354,14 +347,6 @@ private:
 	UPROPERTY()
 	USplineComponent* SplineComponent = nullptr;
 
-	FBeforeMovementAttachedToSplineEvent BeforeMovementAttachedToSpline;
-	FBeforeMovementBeginAttachingToSplineEvent BeforeMovementBeginAttachingToSpline;
-	FBeforeMovementDetachedFromSplineEvent BeforeMovementDetachedFromSpline;
-
-	FMovementAttachedToSplineEvent MovementAttachedToSpline;
-	FMovementBeginAttachingToSplineEvent MovementBeginAttachingToSpline;
-	FMovementDetachedFromSplineEvent MovementDetachedFromSpline;
-
 	bool GotoState_Attaching();
 	bool GotoState_Attached(bool bInSignalBeforeEvent = true);
 	bool GotoState_Detached();
@@ -425,6 +410,7 @@ private:
 
 	/** Config*/
 	FSplineMovementConfig* pConfig = nullptr;
+	FSplineMovementDelegates* pDelegates = nullptr;
 	// ~Environment End
 	
 };

@@ -7,8 +7,6 @@
 * Publicly available types for all types of the Spline Movement components.
 */
 
-class USplineMovementComponentImpl;
-
 UENUM(BlueprintType, Category=SplineMovement)
 enum class ESplineMovementAttachState : uint8
 {
@@ -30,30 +28,59 @@ enum class ESplineMovementAttachState : uint8
 	Attached             = 2           UMETA(DisplayName = "Attached")
 };
 
-// ~Events Begin
+// ~Delegates Begin
 /**
-* @param 1: Attachment state right before
 * Called right before the state is changed and phys variables (transform, velocities, tracking speed) are updated.
+*
+* @param InStateBefore  Attachment state right before
 */
-DECLARE_EVENT_OneParam(USplineMovementComponentImpl, FBeforeMovementAttachedToSplineEvent, ESplineMovementAttachState);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FBeforeMovementAttachedToSplineSignature, ESplineMovementAttachState, InStateBefore);
 
 /**
-* @param 1: Attachment state right before
 * Called right before the state is changed and phys variables (transform, velocities, tracking speed) are updated.
 * @warn Not called, when attaching is immediate (@see the corresponding event for the attached state instead!)
+*
+* @param InStateBefore  Attachment state right before
 */
-DECLARE_EVENT_OneParam(USplineMovementComponentImpl, FBeforeMovementBeginAttachingToSplineEvent, ESplineMovementAttachState);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FBeforeMovementBeginAttachingToSplineSignature, ESplineMovementAttachState, InStateBefore);
 
 /**
-* @param 1: Attachment state right before
 * Called right before the state is changed and phys variables (transform, velocities, tracking speed) are updated.
+*
+* @param InStateBefore  Attachment state right before
 */
-DECLARE_EVENT_OneParam(USplineMovementComponentImpl, FBeforeMovementDetachedFromSplineEvent, ESplineMovementAttachState);
-DECLARE_EVENT(USplineMovementComponentImpl, FMovementAttachedToSplineEvent);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FBeforeMovementDetachedFromSplineSignature, ESplineMovementAttachState, InStateBefore);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FMovementAttachedToSplineSignature);
 
 /**
 * @warn Not called, when attaching is immediate (@see the corresponding event for the attached state instead!)
 */
-DECLARE_EVENT(USplineMovementComponentImpl, FMovementBeginAttachingToSplineEvent);
-DECLARE_EVENT(USplineMovementComponentImpl, FMovementDetachedFromSplineEvent);
-// ~Events End
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FMovementBeginAttachingToSplineSignature);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FMovementDetachedFromSplineSignature);
+
+
+USTRUCT(BlueprintType, Category=SplineMovement)
+struct FSplineMovementDelegates
+{
+	GENERATED_BODY()
+	
+	UPROPERTY(BlueprintAssignable, Category=Delegates)
+	FBeforeMovementAttachedToSplineSignature BeforeMovementAttachedToSpline;
+
+	UPROPERTY(BlueprintAssignable, Category=Delegates)
+	FBeforeMovementBeginAttachingToSplineSignature BeforeMovementBeginAttachingToSpline;
+
+	UPROPERTY(BlueprintAssignable, Category=Delegates)
+	FBeforeMovementDetachedFromSplineSignature BeforeMovementDetachedFromSpline;
+
+	UPROPERTY(BlueprintAssignable, Category=Delegates)
+	FMovementAttachedToSplineSignature OnMovementAttachedToSpline;
+
+	UPROPERTY(BlueprintAssignable, Category=Delegates)
+	FMovementBeginAttachingToSplineSignature OnMovementBeginAttachingToSpline;
+
+	UPROPERTY(BlueprintAssignable, Category=Delegates)
+	FMovementDetachedFromSplineSignature OnMovementDetachedFromSpline;
+};
+
+// ~Delegates End

@@ -47,13 +47,6 @@ public:
 	UFUNCTION(BlueprintGetter, Category = Spline)
 	ESplineMovementAttachState GetAttachState() const;
 
-	FBeforeMovementAttachedToSplineEvent& OnBeforeMovementAttachedToSpline();
-	FBeforeMovementBeginAttachingToSplineEvent& OnBeforeMovementBeginAttachingToSpline();
-	FBeforeMovementDetachedFromSplineEvent& OnBeforeMovementDetachedFromSpline();
-	FMovementAttachedToSplineEvent& OnMovementAttachedToSpline();
-	FMovementBeginAttachingToSplineEvent& OnMovementBeginAttachingToSpline();
-	FMovementDetachedFromSplineEvent& OnMovementDetachedFromSpline();
-
 	UFUNCTION(BlueprintGetter, Category = Spline)
 	bool IsFreeMovement() const;
 
@@ -109,6 +102,9 @@ public:
 	void SetLocationAlongSpline(float NewLocationAlongSpline);
 	// ~ Spline End
 	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Delegates)
+	FSplineMovementDelegates Delegates;
+
 private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Meta=(AllowPrivateAccess=true), Category = Config)
 	FSplineMovementConfig Config;

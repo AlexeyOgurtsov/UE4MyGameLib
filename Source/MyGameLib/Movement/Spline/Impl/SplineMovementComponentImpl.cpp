@@ -13,7 +13,7 @@
 * @TODO Events:
 * 1. Attaching/Detaching/Attached states etc.
 * 1.0. Call the events (+DONE)
-* 1.1. Make MovementComponent's events bindable from Blueprint
+* 1.1. Make MovementComponent's events bindable from Blueprint (+CODED)
 *
 * @TODO Free Mode
 * 1. Rotation is to be rotated by the LocalToMoveSpace's rotation relative to the movement axis (+CODED)
@@ -29,13 +29,15 @@ USplineMovementComponentImpl::USplineMovementComponentImpl()
 	AttachState.SetDetached();
 }
 
-USplineMovementComponentImpl* USplineMovementComponentImpl::CreateSplineMovementComponentImpl(FName const InObjectName, UMovementComponent* const InMovementComponent, FSplineMovementConfig* const pInConfig)
+USplineMovementComponentImpl* USplineMovementComponentImpl::CreateSplineMovementComponentImpl(FName const InObjectName, UMovementComponent* const InMovementComponent, FSplineMovementConfig* const pInConfig, FSplineMovementDelegates* pInDelegates)
 {
 	checkf(InMovementComponent, TEXT("When calling \"%s\" the given movement component must be valid non-NULL pointer"), TEXT(__FUNCTION__));
 	checkf(pInConfig, TEXT("When calling \"%s\" the given config pointer must be valid non-NULL pointer"), TEXT(__FUNCTION__));
+	checkf(pInDelegates, TEXT("When calling \"%s\" the given delegates pointer must be valid non-NULL pointer"), TEXT(__FUNCTION__));
 	USplineMovementComponentImpl* const Obj = InMovementComponent->CreateDefaultSubobject<USplineMovementComponentImpl>(InObjectName);
 	Obj->MovementComponent = InMovementComponent;
 	Obj->pConfig = pInConfig;
+	Obj->pDelegates = pInDelegates;
 	return Obj;
 
 }
@@ -874,11 +876,11 @@ bool USplineMovementComponentImpl::GotoState_Attaching()
 
 	if( bAttachInstantly )
 	{
-		BeforeMovementAttachedToSpline.Broadcast(GetAttachState());
+		pDelegates->BeforeMovementAttachedToSpline.Broadcast(GetAttachState());
 	}
 	else
 	{
-		BeforeMovementBeginAttachingToSpline.Broadcast(GetAttachState());
+		pDelegates->BeforeMovementBeginAttachingToSpline.Broadcast(GetAttachState());
 	}
 
 	// Should we keep world rotation
@@ -921,16 +923,16 @@ bool USplineMovementComponentImpl::GotoState_Attaching()
 		//LocalToMoveSpace.SetLocation(FVector::ZeroVector);
 		FTransform const OldMoveSpaceToWorld = GetMoveSpaceToWorld_ForFreeMovement(GetUpdatedComponent());
 		AttachState.SetAttaching(OldMoveSpaceToWorld);
-		MovementBeginAttachingToSpline.Broadcast();
+		pDelegates->OnMovementBeginAttachingToSpline.Broadcast();
 		return true;
 	}
 }
 bool USplineMovementComponentImpl::GotoState_Detached()
 {
 	M_LOGFUNC();
-	BeforeMovementDetachedFromSpline.Broadcast(GetAttachState());
+	pDelegates->BeforeMovementDetachedFromSpline.Broadcast(GetAttachState());
 	AttachState.SetDetached();
-	MovementDetachedFromSpline.Broadcast();
+	pDelegates->OnMovementDetachedFromSpline.Broadcast();
 	return true;
 }
 
@@ -944,11 +946,11 @@ bool USplineMovementComponentImpl::GotoState_Attached(bool const bInSignalBefore
 	M_LOGFUNC();
 	if(bInSignalBeforeEvent)
 	{
-		BeforeMovementAttachedToSpline.Broadcast(GetAttachState());
+		pDelegates->BeforeMovementAttachedToSpline.Broadcast(GetAttachState());
 	}
 	AttachState.SetAttached();
 	// @TODO: Handle tracking speed
-	MovementAttachedToSpline.Broadcast();
+	pDelegates->OnMovementAttachedToSpline.Broadcast();
 	return true;
 }
 
