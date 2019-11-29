@@ -39,7 +39,6 @@ public:
 	
 	// ~UPawnMovementComponent Begin
 	virtual void AddInputVector(FVector WorldVector, bool bForce = true) override;
-	void AddMoveSpaceMovementInput(FVector MoveSpaceVector, bool bForce = true);
 	// ~UPawnMovementComponent End
 	
 	/** GetConfig*/
@@ -93,6 +92,12 @@ public:
 
 	UFUNCTION(BlueprintGetter, Category = Spline)
 	const FTransform& GetMoveSpaceToWorld() const;
+
+	UFUNCTION(BlueprintCallable, Category = Spline)
+	void AddMoveSpaceMovementInput(FVector MoveSpaceVector, bool bForce = true);
+
+	UFUNCTION(BlueprintGetter, Category = Spline)
+	const FVector& GetMoveSpacePendingInputVector() const;
 
 	UFUNCTION(BlueprintCallable, Category = Spline)
 	bool AttachToSpline();

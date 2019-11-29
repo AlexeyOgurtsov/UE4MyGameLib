@@ -99,6 +99,8 @@ void USplinePawnMovement::AddInputVector(FVector const WorldVector, bool const b
 	Impl->SetPendingInputVector(GetPendingInputVector());
 }
 
+// ~UPawnMovementComponent End
+
 void USplinePawnMovement::AddMoveSpaceMovementInput(FVector const MoveSpaceVector, bool const bForce)
 {
 	if( ! IsMoveInputIgnored() || bForce )
@@ -110,7 +112,11 @@ void USplinePawnMovement::AddMoveSpaceMovementInput(FVector const MoveSpaceVecto
 		Impl->SetOnlyWorldSpacePendingInputVector(GetPendingInputVector());
 	}
 }
-// ~UPawnMovementComponent End
+
+const FVector& USplinePawnMovement::GetMoveSpacePendingInputVector() const
+{
+	return Impl->GetMoveSpacePendingInputVector();
+}
 
 // ~ UObject Begin
 #if WITH_EDITOR
@@ -179,12 +185,12 @@ FVector USplinePawnMovement::GetMoveSpaceVelocity(bool const bInAddTrackSpeed) c
 	return Impl->GetMoveSpaceVelocity(bInAddTrackSpeed);
 }
 
-void USplinePawnMovement::SetVelocityInMoveSpace(const FVector& InVelocity, bool bTrackingAccountedInVelocity)
+void USplinePawnMovement::SetVelocityInMoveSpace(const FVector& InVelocity, bool const bTrackingAccountedInVelocity)
 {
 	return Impl->SetVelocityInMoveSpace(InVelocity, bTrackingAccountedInVelocity);
 }
 
-void USplinePawnMovement::SetVelocityInWorldSpace(const FVector& InVelocity, bool bTrackingAccountedInVelocity)
+void USplinePawnMovement::SetVelocityInWorldSpace(const FVector& InVelocity, bool const bTrackingAccountedInVelocity)
 {
 	return Impl->SetVelocityInWorldSpace(InVelocity, bTrackingAccountedInVelocity);
 }

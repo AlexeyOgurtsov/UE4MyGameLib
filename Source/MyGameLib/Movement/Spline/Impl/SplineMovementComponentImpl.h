@@ -168,7 +168,7 @@ public:
 
 	/**
 	* Returns whether we're in the attaching-to-spline state now.
-	* @warn: In the attaching state the spline component is always valid NON-null pointer.
+	* @warn In the attaching state the spline component is always valid NON-null pointer.
 	*/
 	bool IsAttachingMovementToSplineNow() const;
 	bool IsMovementAttachedOrAttachingToSpline() const;
@@ -231,6 +231,21 @@ public:
 	* @warning: Slow: recalculates move space each time!
 	*/
 	const FTransform& GetMoveSpaceToWorld() const;
+
+	/**
+	* Adds pending input vector in the move space.
+	* Does nothing when the current move space cannot be calculated now.
+	*
+	* @param  InInputVector  Input vector in move space.
+	* @returns   The given input vector transformed to the world space.
+	*/
+	FVector AddMoveSpaceMovementInput(const FVector& InInputVector);
+
+	/**
+	* Returns current pending input vector in the move space.
+	* @warn  This vector is NOT normalized!
+	*/
+	const FVector& GetMoveSpacePendingInputVector() const;
 
 	/**
 	* Detaches from spline.
@@ -325,15 +340,6 @@ public:
 	// ~Implementation-only movement component functions End
 
 	// ~UMovementComponent Begin 
-	/**
-	* Adds pending input vector in the move space.
-	* Does nothing when the current move space cannot be calculated now.
-	*
-	* @param  InInputVector  Input vector in move space.
-	* @returns   The given input vector transformed to the world space.
-	*/
-	FVector AddMoveSpaceMovementInput(const FVector& InInputVector);
-
 	/**
 	* To be called from the OnTeleported of the Movement Component.
 	*/

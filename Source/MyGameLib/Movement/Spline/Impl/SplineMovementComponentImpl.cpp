@@ -719,6 +719,11 @@ FVector USplineMovementComponentImpl::AddMoveSpaceMovementInput(const FVector& I
 	return InputVectorInWorldSpace;
 }
 
+const FVector& USplineMovementComponentImpl::GetMoveSpacePendingInputVector() const
+{
+	return MoveSpaceInputVector;
+}
+
 void USplineMovementComponentImpl::SetOnlyWorldSpacePendingInputVector(const FVector& InInputVector)
 {
 	InputVector = InInputVector;
