@@ -2,9 +2,9 @@
 
 using UnrealBuildTool;
 
-public class MyGameLib : ModuleRules
+public class MyCoreUtils : ModuleRules
 {
-	public MyGameLib(ReadOnlyTargetRules Target) : base(Target)
+	public MyCoreUtils(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 	
@@ -14,8 +14,6 @@ public class MyGameLib : ModuleRules
 
 		// Uncomment if you are using Slate UI
 		PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore", "UMG" });
-
-		PrivateDependencyModuleNames.AddRange(new string[] { "AIModule" });
 		
 		// Uncomment if you are using online features
 		// PrivateDependencyModuleNames.Add("OnlineSubsystem");
