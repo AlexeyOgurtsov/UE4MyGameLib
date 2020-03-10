@@ -17,4 +17,11 @@ public:
 
 	/** GetFloatUpdatedToTarget*/
 	static float GetFloatUpdatedToTarget(float InDeltaTime, float InCurrValue, float InTargetValue, const FGameFloatUpdate& InUpdate, float InErrorTolerance = SMALL_NUMBER);
+
+	/** 
+	 * Computes rotation to apply to the X axis to aim at the given target.
+	 * Only Pitch and Roll components are computed.
+	 */
+	UFUNCTION(BlueprintCallable, Category=GameMath)
+	static FRotator ComputeXAxisAimRotation(FVector TargetLocation);
 };
