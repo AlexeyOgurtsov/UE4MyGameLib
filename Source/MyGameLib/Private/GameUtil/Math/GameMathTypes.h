@@ -22,3 +22,10 @@ struct FGameFloatUpdate
 	{
 	}
 };
+
+UENUM(BlueprintType)
+enum class ERotationDirection : uint8
+{
+	Clockwise UMETA(DisplayName="Clockwise"),
+	CounterClockwise UMETA(DisplayName="Counter clockwise")
+};

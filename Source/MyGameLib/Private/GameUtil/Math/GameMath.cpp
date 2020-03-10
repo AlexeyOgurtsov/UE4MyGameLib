@@ -30,8 +30,42 @@ float UGameMath::GetFloatUpdatedToTarget(float const InDeltaTime, float const In
 	return UpdatedValue;
 }
 
+float UGameMath::K2_GetUnwindedDegreesUpdatedToTarget(const float InDeltaTime, const float InCurrUnwindedDegrees, const float InTargetUnwindedDegrees, const FGameFloatUpdate& InUpdate, const ERotationDirection InRotationDirection)
+{
+	return GetUnwindedDegreesUpdatedToTarget(InDeltaTime, InCurrUnwindedDegrees, InTargetUnwindedDegrees, InUpdate, InRotationDirection);
+}
 
-FRotator UGameMath::ComputeXAxisAimRotation(FVector TargetLocation)
+float UGameMath::GetUnwindedDegreesUpdatedToTarget(const float InDeltaTime, const float InCurrUnwindedDegrees, const float InTargetUnwindedDegrees, const FGameFloatUpdate& InUpdate, const ERotationDirection InRotationDirection, const float InErrorTolerance)
+{
+	if(InCurrUnwindedDegrees == InTargetUnwindedDegrees)
+	{
+		return InCurrUnwindedDegrees;
+	}
+	float WindedCurrDegs = InCurrUnwindedDegrees;
+	float WindedTargetDegs = InTargetUnwindedDegrees;
+	if(InCurrUnwindedDegrees < InTargetUnwindedDegrees)
+	{
+		if(InRotationDirection == ERotationDirection::Clockwise)
+		{
+			WindedCurrDegs = 360 + InCurrUnwindedDegrees;
+		}
+	}
+	else
+	{
+		if(InRotationDirection == ERotationDirection::CounterClockwise)
+		{
+			WindedTargetDegs = 360 + InTargetUnwindedDegrees;
+		}
+	}
+	return FMath::UnwindDegrees(GetFloatUpdatedToTarget(InDeltaTime, WindedCurrDegs, WindedTargetDegs, InUpdate, InErrorTolerance));
+}
+
+float UGameMath::GetRotationDirectionCoeff(ERotationDirection InRotationDirection)
+{
+	return (InRotationDirection == ERotationDirection::CounterClockwise) ? (1.0F) : (-1.0F);
+}
+
+FRotator UGameMath::ComputeXAxisAimRotation(const FVector TargetLocation)
 {
 	if(TargetLocation.IsNearlyZero()) return FRotator{};
 	const FVector DirectionToLocation = TargetLocation.GetUnsafeNormal();
