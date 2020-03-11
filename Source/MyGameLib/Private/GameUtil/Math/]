@@ -1,0 +1,20 @@
+#pragma once
+
+#include "Tests/AutomationCommon.h"
+#include "GameMath.h"
+
+DEFINE_SPEC(GameMathSpec, "GameMath", EAutomationTestFlags::SmokeFilter | EAutomationTestFlags::ApplicationContextMask)
+
+void GameMathSpec::Define()
+{
+	Describe("GetUnwindedDegreesUpdatedToTarget", [this]()
+	{
+		It("Should not pass the target angle, when the increment is bigger then the rest", [this]() {
+			constexpr float DeltaTime = 1.F;
+			constexpr float CurrDegs = 30.F;
+			constexpr float TargetDegs = 45.F;
+			float FGameFloatUpdate Update ( 100.0F );
+			TestTrue(TargetDegs == UGameMath::GetUnwindedDegreesUpdatedToTarget(DeltaTime, CurrDegs, TargetDegs, Update, ERotationDirection::CounterClockwise));
+		});
+	});
+}
